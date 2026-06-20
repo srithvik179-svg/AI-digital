@@ -10,6 +10,7 @@ import SummaryCard from '@/components/dashboard/SummaryCard';
 import TelemetrySearch from '@/components/dashboard/TelemetrySearch';
 import CorrelationDashboard from '@/components/dashboard/CorrelationDashboard';
 import DependencyGraph from '@/components/dashboard/DependencyGraph';
+import KnowledgeGraphExplorer from '@/components/dashboard/KnowledgeGraphExplorer';
 import { Terminal, Settings, Play, ShieldAlert, Cpu, CheckCircle2, Upload, AlertCircle, Loader } from 'lucide-react';
 
 const DEVICE_ID = "laptop-mac-001";
@@ -371,6 +372,9 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
+
+        {/* Phase 15: Neo4j Knowledge Graph Explorer */}
+        <KnowledgeGraphExplorer deviceId={DEVICE_ID} />
 
       </div>
 

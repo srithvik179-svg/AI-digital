@@ -142,6 +142,14 @@ def map_and_store_relationships(device_id: str, db_session: Session) -> Dict[str
 
     db_session.commit()
 
+    # Phase 15: Auto-sync telemetry relationships to Neo4j Graph DB
+    try:
+        from app.services.knowledge_graph import sync_relationships_to_neo4j
+        sync_relationships_to_neo4j(device_id=device_id, db_session=db_session)
+    except Exception as e:
+        from app.core.logging import logger
+        logger.warning(f"Failed to auto-sync knowledge graph to Neo4j: {str(e)}")
+
     # Form relationship graph JSON output
     return {
         "device_id": device_id,
