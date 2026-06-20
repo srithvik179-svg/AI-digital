@@ -8,6 +8,15 @@ export interface ActiveAlert {
   metric_value: number;
 }
 
+// Phase 7: Natural Language Summary
+export interface NLSummary {
+  headline: string;
+  paragraph: string;
+  observations: string[];
+  severity: 'Healthy' | 'Warning' | 'Critical' | string;
+  generated_in_ms: number;
+}
+
 export interface TelemetryData {
   id: string;
   device_id: string;
@@ -65,6 +74,9 @@ export interface TelemetryData {
   // Phase 6: Alert Detection Engine
   active_alerts?: ActiveAlert[];
   alert_count?: number;
+
+  // Phase 7: NL Summary
+  nl_summary?: NLSummary;
 }
 
 export interface ChatMessage {

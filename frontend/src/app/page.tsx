@@ -1,11 +1,12 @@
 'use client';
 
 import React, { useEffect, useState, useRef } from 'react';
-import { TelemetryData, ActiveAlert } from '@/types';
+import { TelemetryData, ActiveAlert, NLSummary } from '@/types';
 import TwinStatus from '@/components/dashboard/TwinStatus';
 import TelemetryCharts from '@/components/dashboard/TelemetryCharts';
 import ChatInterface from '@/components/dashboard/ChatInterface';
 import AlertsPanel from '@/components/dashboard/AlertsPanel';
+import SummaryCard from '@/components/dashboard/SummaryCard';
 import { Terminal, Settings, Play, ShieldAlert, Cpu, CheckCircle2, Upload, AlertCircle, Loader } from 'lucide-react';
 
 const DEVICE_ID = "laptop-mac-001";
@@ -14,6 +15,7 @@ export default function Dashboard() {
   const [telemetryHistory, setTelemetryHistory] = useState<TelemetryData[]>([]);
   const [latestData, setLatestData] = useState<TelemetryData | null>(null);
   const [activeAlerts, setActiveAlerts] = useState<ActiveAlert[]>([]);
+  const [nlSummary, setNlSummary] = useState<NLSummary | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [isSimulating, setIsSimulating] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<{
@@ -106,9 +108,11 @@ export default function Dashboard() {
                 const data = payload.data as TelemetryData;
                 setLatestData(data);
                 setTelemetryHistory(prev => [data, ...prev].slice(0, 60));
-                // Update live alerts from stream
                 if (data.active_alerts) {
                   setActiveAlerts(data.active_alerts);
+                }
+                if (data.nl_summary) {
+                  setNlSummary(data.nl_summary);
                 }
               }
           } catch (err) {
@@ -304,6 +308,9 @@ export default function Dashboard() {
             )}
           </div>
         )}
+
+        {/* Phase 7: NL Summary banner */}
+        <SummaryCard summary={nlSummary} isConnected={isConnected} />
 
         {/* Dashboard HUD Cards */}
         <TwinStatus latestData={latestData} isConnected={isConnected} />

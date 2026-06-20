@@ -12,6 +12,7 @@ from app.core.database import get_db
 from app.core.logging import logger
 from app.services.health_score import compute_health_score
 from app.services.alert_engine import evaluate_alerts
+from app.services.summary_engine import generate_summary
 from app.models.telemetry import (
     TelemetrySnapshot,
     CPUMetrics,
@@ -79,6 +80,24 @@ def flatten_snapshot(snapshot: TelemetrySnapshot) -> Dict[str, Any]:
         thermal_state=snapshot.thermal.thermal_state if snapshot.thermal else None,
     )
 
+    nl = generate_summary(
+        cpu_usage=snapshot.cpu.cpu_usage if snapshot.cpu else 0,
+        memory_usage=snapshot.memory.memory_usage if snapshot.memory else 0,
+        disk_usage=snapshot.disk.disk_usage if snapshot.disk else 0,
+        cpu_temperature=snapshot.thermal.cpu_temperature if snapshot.thermal else 45,
+        battery_level=snapshot.battery.battery_level if snapshot.battery else 100,
+        battery_health=snapshot.battery.battery_health if snapshot.battery else 100,
+        fan_speed=snapshot.thermal.fan_speed_rpm if snapshot.thermal else None,
+        gpu_usage=snapshot.gpu.gpu_usage if snapshot.gpu else None,
+        signal_strength_dbm=snapshot.wifi.signal_strength_dbm if snapshot.wifi else None,
+        power_source=snapshot.power.power_source if snapshot.power else "ac",
+        health_score=snapshot.health_score,
+        health_category=snapshot.health_category,
+        active_process_count=snapshot.cpu.active_process_count if snapshot.cpu else None,
+        thermal_state=snapshot.thermal.thermal_state if snapshot.thermal else None,
+        link_speed_mbps=snapshot.wifi.link_speed_mbps if snapshot.wifi else None,
+    )
+
     return {
         "id": snapshot.id,
         "device_id": snapshot.device_id,
@@ -120,6 +139,15 @@ def flatten_snapshot(snapshot: TelemetrySnapshot) -> Dict[str, Any]:
         "health_category": snapshot.health_category if snapshot.health_category else hs.category,
         "health_breakdown": hs.breakdown,
         "health_recommendations": hs.recommendations,
+
+        # Phase 7: NL Summary
+        "nl_summary": {
+            "headline": nl.headline,
+            "paragraph": nl.paragraph,
+            "observations": nl.observations,
+            "severity": nl.severity,
+            "generated_in_ms": nl.generated_in_ms,
+        },
     }
 
 @router.post("/", response_model=TelemetryResponse)
@@ -403,6 +431,25 @@ async def generate_mock_stream(websocket: WebSocket, device_id: str):
                 device_id=device_id,
             )
 
+            # Phase 7: Generate NL summary for this mock tick
+            nl = generate_summary(
+                cpu_usage=cpu_usage,
+                memory_usage=memory_usage,
+                disk_usage=disk_usage,
+                cpu_temperature=cpu_temp,
+                battery_level=round(battery_level, 1),
+                battery_health=94.0,
+                fan_speed=fan_speed,
+                gpu_usage=mock_gpu_usage,
+                signal_strength_dbm=float(mock_signal_dbm),
+                power_source=power_source,
+                health_score=hs.score,
+                health_category=hs.category,
+                active_process_count=random.randint(90, 140),
+                thermal_state=thermal_state,
+                link_speed_mbps=866,
+            )
+
             # Form standard telemetry dict matching TelemetryResponse
             mock_data = {
                 "type": "telemetry_update",
@@ -458,6 +505,15 @@ async def generate_mock_stream(websocket: WebSocket, device_id: str):
                         for a in active_alerts
                     ],
                     "alert_count": len(active_alerts),
+
+                    # Phase 7: NL Summary
+                    "nl_summary": {
+                        "headline": nl.headline,
+                        "paragraph": nl.paragraph,
+                        "observations": nl.observations,
+                        "severity": nl.severity,
+                        "generated_in_ms": nl.generated_in_ms,
+                    },
                 }
             }
 
