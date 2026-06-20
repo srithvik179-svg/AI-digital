@@ -86,3 +86,15 @@ class TwinResponse(BaseModel):
     response: str
     source_documents: list[str] = []
     timestamp: datetime = Field(default_factory=datetime.utcnow)
+
+
+class ChatQuery(BaseModel):
+    device_id: str = Field(..., example="laptop-mac-001")
+    query: str = Field(..., example="What is my CPU status?")
+
+
+class ChatResponse(BaseModel):
+    query: str
+    response: str
+    source_documents: list[str] = []
+    timestamp: datetime = Field(default_factory=datetime.utcnow)
