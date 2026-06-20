@@ -8,6 +8,7 @@ import ChatInterface from '@/components/dashboard/ChatInterface';
 import AlertsPanel from '@/components/dashboard/AlertsPanel';
 import SummaryCard from '@/components/dashboard/SummaryCard';
 import TelemetrySearch from '@/components/dashboard/TelemetrySearch';
+import CorrelationDashboard from '@/components/dashboard/CorrelationDashboard';
 import { Terminal, Settings, Play, ShieldAlert, Cpu, CheckCircle2, Upload, AlertCircle, Loader } from 'lucide-react';
 
 const DEVICE_ID = "laptop-mac-001";
@@ -17,6 +18,7 @@ export default function Dashboard() {
   const [latestData, setLatestData] = useState<TelemetryData | null>(null);
   const [activeAlerts, setActiveAlerts] = useState<ActiveAlert[]>([]);
   const [nlSummary, setNlSummary] = useState<NLSummary | null>(null);
+  const [tickCount, setTickCount] = useState(0);
   const [isConnected, setIsConnected] = useState(false);
   const [isSimulating, setIsSimulating] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<{
@@ -109,6 +111,7 @@ export default function Dashboard() {
                 const data = payload.data as TelemetryData;
                 setLatestData(data);
                 setTelemetryHistory(prev => [data, ...prev].slice(0, 60));
+                setTickCount(c => c + 1);
                 if (data.active_alerts) {
                   setActiveAlerts(data.active_alerts);
                 }
@@ -318,6 +321,9 @@ export default function Dashboard() {
 
         {/* ── 5-Panel Telemetry Charts — Full Width ── */}
         <TelemetryCharts data={telemetryHistory} />
+
+        {/* Phase 13: Statistical Correlation Heatmap */}
+        <CorrelationDashboard deviceId={DEVICE_ID} tickCount={tickCount} />
 
         {/* ── Bottom Row 1: Alerts & Telemetry Search ── */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

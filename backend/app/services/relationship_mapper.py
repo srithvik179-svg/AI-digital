@@ -31,6 +31,32 @@ def pearson_correlation(x: List[float], y: List[float]) -> float:
 
     return num / ((den_x * den_y) ** 0.5)
 
+def get_ranks(data: List[float]) -> List[float]:
+    """Helper to compute fractional ranks for Spearman correlation calculation."""
+    n = len(data)
+    indexed = [(val, idx) for idx, val in enumerate(data)]
+    indexed.sort(key=lambda x: x[0])
+    
+    ranks = [0.0] * n
+    i = 0
+    while i < n:
+        j = i
+        while j < n and indexed[j][0] == indexed[i][0]:
+            j += 1
+        avg_rank = sum(k + 1 for k in range(i, j)) / (j - i)
+        for k in range(i, j):
+            ranks[indexed[k][1]] = avg_rank
+        i = j
+    return ranks
+
+def spearman_correlation(x: List[float], y: List[float]) -> float:
+    """Computes the Spearman rank correlation coefficient between two numeric datasets."""
+    if len(x) != len(y) or len(x) < 2:
+        return 0.0
+    rx = get_ranks(x)
+    ry = get_ranks(y)
+    return pearson_correlation(rx, ry)
+
 def map_and_store_relationships(device_id: str, db_session: Session) -> Dict[str, Any]:
     """
     Retrieves historical telemetry, calculates correlations, stores them in the
@@ -189,3 +215,90 @@ def _save_relationship(
             last_updated=datetime.utcnow()
         )
         db_session.add(new_rel)
+
+
+def generate_correlation_matrix(device_id: str, db_session: Session) -> Dict[str, Any]:
+    """
+    Computes N x N correlation matrix for both Pearson and Spearman rank methods
+    across key numeric telemetry variables.
+    """
+    snapshots = (
+        db_session.query(TelemetrySnapshot)
+        .options(
+            joinedload(TelemetrySnapshot.cpu),
+            joinedload(TelemetrySnapshot.gpu),
+            joinedload(TelemetrySnapshot.memory),
+            joinedload(TelemetrySnapshot.battery),
+            joinedload(TelemetrySnapshot.disk),
+            joinedload(TelemetrySnapshot.wifi),
+            joinedload(TelemetrySnapshot.thermal),
+            joinedload(TelemetrySnapshot.power)
+        )
+        .filter(TelemetrySnapshot.device_id == device_id)
+        .order_by(TelemetrySnapshot.timestamp.asc())
+        .limit(300)
+        .all()
+    )
+
+    metrics = [
+        {"id": "cpu_usage", "label": "CPU Usage"},
+        {"id": "memory_usage", "label": "Memory Usage"},
+        {"id": "disk_usage", "label": "Disk Usage"},
+        {"id": "cpu_temperature", "label": "CPU Temp"},
+        {"id": "fan_speed_rpm", "label": "Fan Speed"},
+        {"id": "battery_level", "label": "Battery Level"},
+        {"id": "battery_temperature", "label": "Battery Temp"},
+        {"id": "gpu_usage", "label": "GPU Usage"}
+    ]
+
+    metric_keys = [m["id"] for m in metrics]
+    n = len(metric_keys)
+
+    # Initialize matrices with identity diagonal
+    pearson_matrix = [[1.0 if i == j else 0.0 for j in range(n)] for i in range(n)]
+    spearman_matrix = [[1.0 if i == j else 0.0 for j in range(n)] for i in range(n)]
+
+    if len(snapshots) >= 5:
+        series_data: Dict[str, List[float]] = {key: [] for key in metric_keys}
+
+        for s in snapshots:
+            cpu_val = s.cpu.cpu_usage if s.cpu else 0.0
+            mem_val = s.memory.memory_usage if s.memory else 0.0
+            disk_val = s.disk.disk_usage if s.disk else 0.0
+            temp_val = s.thermal.cpu_temperature if s.thermal else 0.0
+            fan_val = s.thermal.fan_speed_rpm if s.thermal else 0.0
+            bat_val = s.battery.battery_level if s.battery else 0.0
+            bat_temp = s.battery.battery_temperature if (s.battery and s.battery.battery_temperature is not None) else 30.0
+            gpu_val = s.gpu.gpu_usage if s.gpu else 0.0
+
+            series_data["cpu_usage"].append(cpu_val)
+            series_data["memory_usage"].append(mem_val)
+            series_data["disk_usage"].append(disk_val)
+            series_data["cpu_temperature"].append(temp_val)
+            series_data["fan_speed_rpm"].append(fan_val)
+            series_data["battery_level"].append(bat_val)
+            series_data["battery_temperature"].append(bat_temp)
+            series_data["gpu_usage"].append(gpu_val)
+
+        for i in range(n):
+            for j in range(i + 1, n):
+                k1 = metric_keys[i]
+                k2 = metric_keys[j]
+                
+                # Pearson
+                p_val = pearson_correlation(series_data[k1], series_data[k2])
+                pearson_matrix[i][j] = round(p_val, 3)
+                pearson_matrix[j][i] = round(p_val, 3)
+
+                # Spearman
+                s_val = spearman_correlation(series_data[k1], series_data[k2])
+                spearman_matrix[i][j] = round(s_val, 3)
+                spearman_matrix[j][i] = round(s_val, 3)
+
+    return {
+        "device_id": device_id,
+        "metrics": metrics,
+        "pearson": pearson_matrix,
+        "spearman": spearman_matrix,
+        "total_records_analyzed": len(snapshots)
+    }
