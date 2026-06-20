@@ -5,6 +5,7 @@ from app.api.v1.health_score import router as health_score_router
 from app.api.v1.alerts import router as alerts_router
 from app.api.v1.summary import router as summary_router
 from app.api.v1.chat import router as chat_router
+from app.api.v1.search import router as search_router
 
 router = APIRouter()
 
@@ -14,6 +15,7 @@ router.include_router(health_score_router, prefix="/health-score",  tags=["healt
 router.include_router(alerts_router,       prefix="/alerts",        tags=["alerts"])
 router.include_router(summary_router,      prefix="/summary",       tags=["summary"])
 router.include_router(chat_router,         prefix="/chat",          tags=["chatbot"])
+router.include_router(search_router,       prefix="/search",        tags=["search"])
 
 @router.get("/health", tags=["health"])
 def health_check():

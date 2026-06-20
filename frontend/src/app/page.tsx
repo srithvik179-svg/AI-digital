@@ -7,6 +7,7 @@ import TelemetryCharts from '@/components/dashboard/TelemetryCharts';
 import ChatInterface from '@/components/dashboard/ChatInterface';
 import AlertsPanel from '@/components/dashboard/AlertsPanel';
 import SummaryCard from '@/components/dashboard/SummaryCard';
+import TelemetrySearch from '@/components/dashboard/TelemetrySearch';
 import { Terminal, Settings, Play, ShieldAlert, Cpu, CheckCircle2, Upload, AlertCircle, Loader } from 'lucide-react';
 
 const DEVICE_ID = "laptop-mac-001";
@@ -318,42 +319,48 @@ export default function Dashboard() {
         {/* ── 5-Panel Telemetry Charts — Full Width ── */}
         <TelemetryCharts data={telemetryHistory} />
 
-        {/* ── Bottom Row: Alerts | AI Chat | Raw Logs ── */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
+        {/* ── Bottom Row 1: Alerts & Telemetry Search ── */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Phase 6: Alert Detection Panel */}
           <AlertsPanel alerts={activeAlerts} deviceId={DEVICE_ID} />
 
+          {/* Phase 9: Telemetry Search Panel */}
+          <TelemetrySearch deviceId={DEVICE_ID} />
+        </div>
+
+        {/* ── Bottom Row 2: AI Chat & Raw Logs ── */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* AI Twin chat interface */}
-          <ChatInterface deviceId={DEVICE_ID} />
+          <div className="lg:col-span-2">
+            <ChatInterface deviceId={DEVICE_ID} />
+          </div>
 
           {/* Historical Logs Console */}
           <div className="glass-panel rounded-2xl border border-white/5 overflow-hidden">
-          <div className="px-5 py-4 border-b border-white/5 bg-slate-900/40 flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <Terminal className="h-4.5 w-4.5 text-indigo-400" />
-              <h3 className="text-xs font-bold text-white uppercase tracking-wider">Raw Telemetry Stream</h3>
+            <div className="px-5 py-4 border-b border-white/5 bg-slate-900/40 flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Terminal className="h-4.5 w-4.5 text-indigo-400" />
+                <h3 className="text-xs font-bold text-white uppercase tracking-wider">Raw Telemetry Stream</h3>
+              </div>
+              <span className="text-[10px] text-slate-500">Showing last 10 frames</span>
             </div>
-            <span className="text-[10px] text-slate-500">Showing last 10 frames</span>
-          </div>
-          <div className="p-4 font-mono text-[11px] leading-relaxed max-h-[220px] overflow-y-auto bg-slate-950/40 text-slate-400 space-y-1">
-            {telemetryHistory.length === 0 ? (
-              <div className="text-center py-6 text-slate-600">Awaiting stream packets...</div>
-            ) : (
-              telemetryHistory.slice(0, 10).map((log, idx) => (
-                <div key={idx} className="flex items-start border-b border-white/[0.02] pb-1 hover:bg-white/[0.01] px-2 rounded">
-                  <span className="text-slate-500 mr-3 shrink-0">[{new Date(log.timestamp).toLocaleTimeString()}]</span>
-                  <span className="text-indigo-400 mr-2 shrink-0">info:</span>
-                  <span className="break-all">
-                    cpu={log.cpu_usage}% | memory={log.memory_usage}% | temp={log.cpu_temperature}°C | fan={log.fan_speed}RPM | battery={log.battery_level}% ({log.power_source}) | processes={log.active_process_count}
-                  </span>
-                </div>
-              ))
-            )}
+            <div className="p-4 font-mono text-[11px] leading-relaxed max-h-[440px] h-[440px] overflow-y-auto bg-slate-950/40 text-slate-400 space-y-1">
+              {telemetryHistory.length === 0 ? (
+                <div className="text-center py-6 text-slate-600">Awaiting stream packets...</div>
+              ) : (
+                telemetryHistory.slice(0, 10).map((log, idx) => (
+                  <div key={idx} className="flex items-start border-b border-white/[0.02] pb-1 hover:bg-white/[0.01] px-2 rounded">
+                    <span className="text-slate-500 mr-3 shrink-0">[{new Date(log.timestamp).toLocaleTimeString()}]</span>
+                    <span className="text-indigo-400 mr-2 shrink-0">info:</span>
+                    <span className="break-all">
+                      cpu={log.cpu_usage}% | memory={log.memory_usage}% | temp={log.cpu_temperature}°C | fan={log.fan_speed}RPM | battery={log.battery_level}% ({log.power_source}) | processes={log.active_process_count}
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         </div>
-
-        </div>{/* end bottom row */}
 
       </div>
 
