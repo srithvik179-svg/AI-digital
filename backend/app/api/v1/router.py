@@ -10,6 +10,7 @@ from app.api.v1.twin_state import router as twin_state_router
 from app.api.v1.relationships import router as relationships_router
 from app.api.v1.knowledge_graph import router as knowledge_graph_router
 from app.api.v1.reasoning import router as reasoning_router
+from app.api.v1.rca import router as rca_router
 
 router = APIRouter()
 
@@ -24,6 +25,7 @@ router.include_router(twin_state_router,  prefix="/twin-state",    tags=["digita
 router.include_router(relationships_router,prefix="/relationships", tags=["relationships-mapper"])
 router.include_router(knowledge_graph_router, prefix="/knowledge-graph", tags=["knowledge-graph"])
 router.include_router(reasoning_router,       prefix="/reasoning",       tags=["reasoning"])
+router.include_router(rca_router,             prefix="/rca",             tags=["rca"])
 
 @router.get("/health", tags=["health"])
 def health_check():

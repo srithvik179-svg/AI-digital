@@ -14,6 +14,7 @@ import KnowledgeGraphExplorer from '@/components/dashboard/KnowledgeGraphExplore
 import ReplayConsole from '@/components/dashboard/ReplayConsole';
 import TimeTravelPlayground from '@/components/dashboard/TimeTravelPlayground';
 import ReasoningEngine from '@/components/dashboard/ReasoningEngine';
+import RootCauseAnalysis from '@/components/dashboard/RootCauseAnalysis';
 import { Terminal, Settings, Play, ShieldAlert, Cpu, CheckCircle2, Upload, AlertCircle, Loader } from 'lucide-react';
 
 const DEVICE_ID = "laptop-mac-001";
@@ -385,11 +386,21 @@ export default function Dashboard() {
           <DependencyGraph deviceId={DEVICE_ID} tickCount={tickCount} />
         </div>
 
-        {/* ── Bottom Row 1: Alerts & Telemetry Search ── */}
+        {/* ── Bottom Row 1: Alerts & Root Cause Diagnostics ── */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Phase 6: Alert Detection Panel */}
           <AlertsPanel alerts={activeAlerts} deviceId={DEVICE_ID} />
 
+          {/* Phase 22: Root Cause Analysis Panel */}
+          <RootCauseAnalysis 
+            deviceId={DEVICE_ID} 
+            latestSnapshotId={latestData?.id} 
+            tickCount={tickCount} 
+          />
+        </div>
+
+        {/* ── Bottom Row 1.5: Telemetry Search ── */}
+        <div className="grid grid-cols-1 gap-6">
           {/* Phase 9: Telemetry Search Panel */}
           <TelemetrySearch deviceId={DEVICE_ID} />
         </div>
