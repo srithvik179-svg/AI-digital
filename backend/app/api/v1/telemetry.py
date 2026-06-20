@@ -203,6 +203,7 @@ async def websocket_endpoint(websocket: WebSocket):
     WebSocket endpoint for real-time telemetry streaming and dashboard updates.
     """
     await manager.connect(websocket)
+    mock_task = None
     try:
         while True:
             # Receive message from client if any
@@ -212,12 +213,18 @@ async def websocket_endpoint(websocket: WebSocket):
             # Allow clients to request a start of mock telemetry generation
             if message.get("type") == "start_mock_stream":
                 device_id = message.get("device_id", "laptop-mac-001")
-                asyncio.create_task(generate_mock_stream(websocket, device_id))
+                if mock_task and not mock_task.done():
+                    mock_task.cancel()
+                mock_task = asyncio.create_task(generate_mock_stream(websocket, device_id))
     except WebSocketDisconnect:
         manager.disconnect(websocket)
+        if mock_task and not mock_task.done():
+            mock_task.cancel()
     except Exception as e:
         logger.error(f"WebSocket error: {str(e)}")
         manager.disconnect(websocket)
+        if mock_task and not mock_task.done():
+            mock_task.cancel()
 
 async def generate_mock_stream(websocket: WebSocket, device_id: str):
     """
@@ -286,5 +293,7 @@ async def generate_mock_stream(websocket: WebSocket, device_id: str):
             
             # Sleep 2 seconds between ticks
             await asyncio.sleep(2)
+    except asyncio.CancelledError:
+        logger.info(f"Cancelled mock telemetry stream for {device_id}")
     except Exception as e:
         logger.info(f"Stopped mock telemetry stream: {str(e)}")

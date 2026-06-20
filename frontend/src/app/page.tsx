@@ -77,30 +77,50 @@ export default function Dashboard() {
     const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8000/api/v1/telemetry/ws';
     console.log(`Connecting to WebSocket: ${wsUrl}`);
     
+    let reconnectTimeout: NodeJS.Timeout | null = null;
+    let isUnmounted = false;
+
     const connectWs = () => {
+      if (isUnmounted) return;
+
       try {
         const ws = new WebSocket(wsUrl);
         wsRef.current = ws;
 
         ws.onopen = () => {
+          if (isUnmounted) {
+            ws.close();
+            return;
+          }
           setIsConnected(true);
           console.log("WebSocket connected.");
         };
 
         ws.onmessage = (event) => {
-          const payload = JSON.parse(event.data);
-          if (payload.type === 'telemetry_update') {
-            const data = payload.data as TelemetryData;
-            setLatestData(data);
-            setTelemetryHistory(prev => [data, ...prev].slice(0, 30));
+          if (isUnmounted) return;
+          try {
+            const payload = JSON.parse(event.data);
+            if (payload.type === 'telemetry_update') {
+              const data = payload.data as TelemetryData;
+              setLatestData(data);
+              setTelemetryHistory(prev => [data, ...prev].slice(0, 30));
+            }
+          } catch (err) {
+            console.error("Failed to parse WebSocket message:", err);
           }
         };
 
         ws.onclose = () => {
           setIsConnected(false);
           setIsSimulating(false);
-          console.log("WebSocket disconnected. Reconnecting in 5 seconds...");
-          setTimeout(connectWs, 5000);
+          wsRef.current = null;
+          
+          if (!isUnmounted) {
+            console.log("WebSocket disconnected. Reconnecting in 5 seconds...");
+            reconnectTimeout = setTimeout(connectWs, 5000);
+          } else {
+            console.log("WebSocket connection closed cleanly during cleanup.");
+          }
         };
 
         ws.onerror = (err) => {
@@ -109,14 +129,24 @@ export default function Dashboard() {
         };
       } catch (e) {
         console.error("Failed to connect websocket:", e);
+        if (!isUnmounted) {
+          reconnectTimeout = setTimeout(connectWs, 5000);
+        }
       }
     };
 
     connectWs();
 
     return () => {
+      isUnmounted = true;
+      if (reconnectTimeout) {
+        clearTimeout(reconnectTimeout);
+      }
       if (wsRef.current) {
+        // Prevent onclose handler from running when we close it explicitly
+        wsRef.current.onclose = null;
         wsRef.current.close();
+        wsRef.current = null;
       }
     };
   }, []);
