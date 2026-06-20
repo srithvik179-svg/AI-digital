@@ -13,6 +13,7 @@ import DependencyGraph from '@/components/dashboard/DependencyGraph';
 import KnowledgeGraphExplorer from '@/components/dashboard/KnowledgeGraphExplorer';
 import ReplayConsole from '@/components/dashboard/ReplayConsole';
 import TimeTravelPlayground from '@/components/dashboard/TimeTravelPlayground';
+import ReasoningEngine from '@/components/dashboard/ReasoningEngine';
 import { Terminal, Settings, Play, ShieldAlert, Cpu, CheckCircle2, Upload, AlertCircle, Loader } from 'lucide-react';
 
 const DEVICE_ID = "laptop-mac-001";
@@ -429,6 +430,13 @@ export default function Dashboard() {
 
         {/* Phase 15: Neo4j Knowledge Graph Explorer */}
         <KnowledgeGraphExplorer deviceId={DEVICE_ID} />
+
+        {/* Phase 21: Rule-Based Reasoning Engine */}
+        <ReasoningEngine 
+          deviceId={DEVICE_ID} 
+          latestSnapshotId={latestData?.id} 
+          tickCount={tickCount} 
+        />
 
       </div>
 

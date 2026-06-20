@@ -4,6 +4,7 @@ from app.core.config import settings
 from app.core.logging import logger
 from app.core.database import engine, Base
 from app.models.relationship import TelemetryRelationship
+from app.models.reasoning import ReasoningRule
 from app.api.v1.router import router as api_v1_router
 
 # Initialize PostgreSQL database tables

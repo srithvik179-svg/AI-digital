@@ -160,3 +160,33 @@ export interface RelationshipGraph {
   edges: RelationshipEdge[];
   total_records_analyzed: number;
 }
+
+// Phase 21: Rule-Based Reasoning Engine types
+export interface RuleCondition {
+  metric: string;
+  operator: string;
+  value: number | string;
+}
+
+export interface ReasoningRule {
+  id: string;
+  name: string;
+  description?: string;
+  conditions: RuleCondition[];
+  logical_operator: 'AND' | 'OR' | string;
+  conclusion: string;
+  severity: 'info' | 'warning' | 'critical' | string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface RuleEvaluationResult {
+  rule_id: string;
+  rule_name: string;
+  triggered: boolean;
+  explanation: string;
+  evidence: Record<string, any>;
+  severity: string;
+}
+
