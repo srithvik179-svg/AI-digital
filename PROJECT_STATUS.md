@@ -1,11 +1,11 @@
-# Project Status - Dell AI Digital Twin
+# Project Status - Laptop Telemetry AI Digital Twin
 
-Track the active design phases, completed milestones, and known backlog/technical debt of the Dell AI Digital Twin project.
+Track the active design phases, completed milestones, and tech stack details of the Laptop Telemetry Digital Twin project.
 
 ---
 
 ## Active Phase
-- **Current Phase**: `Phase 2 - Telemetry Ingestion Service`
+- **Current Phase**: `Phase 10 - MVP Release`
 - **Status**: Completed :white_check_mark:
 
 ---
@@ -14,16 +14,22 @@ Track the active design phases, completed milestones, and known backlog/technica
 
 | Phase | Milestone | Status | Details |
 | :--- | :--- | :--- | :--- |
-| **Phase 1** | **System Setup & Starter Structure** | Completed :white_check_mark: | Base directories, Docker configurations, backend, frontend, logging, versioning, database schemas, mock simulators, RAG wrapper, and Docker up validation. |
+| **Phase 1** | **System Setup & starter structure** | Completed :white_check_mark: | Base directories, Docker Compose setup, backend (FastAPI), frontend (Next.js), database configurations, and Docker up validation. |
 | **Phase 2** | **Telemetry Ingestion Service** | Completed :white_check_mark: | Ingest laptop telemetry CSV datasets, validate schemas, clean and interpolate missing metrics, database bulk insert (50,000+ records imported), and unit testing. |
-| **Phase 3** | **ChromaDB Production Vector Storage** | Pending :hour_glass: | True persistent semantic search over real physical device failure events. |
-| **Phase 4** | **AI Twin Reasoning Engine Upgrade** | Pending :hour_glass: | Advanced diagnostics, automated thermal tuning, and troubleshooting recommendations. |
+| **Phase 3** | **Database Schema Normalization** | Completed :white_check_mark: | Decomposed flat telemetry table into 8 normalized child tables (CPU, GPU, Memory, Battery, Disk, WiFi, Thermal, Power) with indexes and performance optimizations. |
+| **Phase 4** | **Recharts Dashboard Redesign** | Completed :white_check_mark: | Developed full 5-panel auto-updating dashboard covering CPU, GPU, Temperature, Battery, and WiFi metrics with glassmorphism tooltips. |
+| **Phase 5** | **Laptop Health Score Engine** | Completed :white_check_mark: | Designed a 7-component scoring formula producing a 0-100 score (Healthy, Warning, Critical) with recommendation cards. |
+| **Phase 6** | **Alert Detection Engine** | Completed :white_check_mark: | Created a rule-based engine with 16 rules across overheating, battery, disk, and network categories with severity-based deduplication and acknowledgement feeds. |
+| **Phase 7** | **Natural Language Summary Generator** | Completed :white_check_mark: | Created a sub-millisecond, pure-Python template summary generator compiling telemetry snapshots into readable narratives. |
+| **Phase 8** | **Deterministic Telemetry Chatbot** | Completed :white_check_mark: | Created a rule-based chatbot query engine answering CPU, GPU, battery, and disk telemetry questions strictly from data snapshots. |
+| **Phase 9** | **Natural Language Telemetry Search** | Completed :white_check_mark: | Built a search engine compiling natural language phrases to database filters, with a detailed frontend search card. |
+| **Phase 10** | **MVP Production Release** | Completed :white_check_mark: | Verified production frontend compilation (`next build`), ran end-to-end integration tests, and completed documentation updates. |
 
 ---
 
-## Technical Debt & Backlog
+## Tech Stack Overview
 
-1. **Authentication and Security Rules**: Implement token-based authentication (OAuth2 / JWT) on API endpoints. Currently wide open for development.
-2. **Production Vector Embedding Functions**: Switch ChromaDB embeddings from default in-memory mapping to production OpenAI/HuggingFace embeddings when actual API keys are supplied.
-3. **Database Migrations**: Add Alembic migration support for database schema changes in backend. Currently using `Base.metadata.create_all` which does not support schema updates dynamically.
-4. **Unit and Integration Tests**: Implement pytest suites for backend routers and Vitest/Jest for React component layout validations.
+1. **Backend**: FastAPI, SQLAlchemy (PostgreSQL ORM), Redis, ChromaDB, Uvicorn, pytest.
+2. **Frontend**: Next.js (React 18), TailwindCSS, Recharts, Lucide React, TypeScript.
+3. **Database**: PostgreSQL 15, Redis Cache, ChromaDB vector collection.
+4. **Daemon**: Local macOS python daemon pushing system metrics to backend via REST API.

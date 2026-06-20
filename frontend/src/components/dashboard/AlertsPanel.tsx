@@ -157,7 +157,11 @@ export const AlertsPanel: React.FC<AlertsPanelProps> = ({ alerts, deviceId }) =>
   const [showAcknowledged, setShowAcknowledged] = useState(false);
 
   const handleAcknowledge = useCallback((rule_id: string) => {
-    setAcknowledgedSet(prev => new Set([...prev, rule_id]));
+    setAcknowledgedSet(prev => {
+      const next = new Set(Array.from(prev));
+      next.add(rule_id);
+      return next;
+    });
     // Also call the API in background
     fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'}/alerts/acknowledge/${rule_id}`, {
       method: 'POST'
@@ -166,7 +170,11 @@ export const AlertsPanel: React.FC<AlertsPanelProps> = ({ alerts, deviceId }) =>
 
   const handleAcknowledgeAll = useCallback(() => {
     const allIds = alerts.map(a => a.rule_id);
-    setAcknowledgedSet(prev => new Set([...prev, ...allIds]));
+    setAcknowledgedSet(prev => {
+      const next = new Set(Array.from(prev));
+      allIds.forEach(id => next.add(id));
+      return next;
+    });
     fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'}/alerts/acknowledge/device/${deviceId}/all`, {
       method: 'POST'
     }).catch(() => {});
