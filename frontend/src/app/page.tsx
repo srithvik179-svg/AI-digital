@@ -9,6 +9,7 @@ import AlertsPanel from '@/components/dashboard/AlertsPanel';
 import SummaryCard from '@/components/dashboard/SummaryCard';
 import TelemetrySearch from '@/components/dashboard/TelemetrySearch';
 import CorrelationDashboard from '@/components/dashboard/CorrelationDashboard';
+import DependencyGraph from '@/components/dashboard/DependencyGraph';
 import { Terminal, Settings, Play, ShieldAlert, Cpu, CheckCircle2, Upload, AlertCircle, Loader } from 'lucide-react';
 
 const DEVICE_ID = "laptop-mac-001";
@@ -322,8 +323,11 @@ export default function Dashboard() {
         {/* ── 5-Panel Telemetry Charts — Full Width ── */}
         <TelemetryCharts data={telemetryHistory} />
 
-        {/* Phase 13: Statistical Correlation Heatmap */}
-        <CorrelationDashboard deviceId={DEVICE_ID} tickCount={tickCount} />
+        {/* Phase 13 & 14: Analytics Grid (Correlation Heatmap & Dependency Topology) */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <CorrelationDashboard deviceId={DEVICE_ID} tickCount={tickCount} />
+          <DependencyGraph deviceId={DEVICE_ID} tickCount={tickCount} />
+        </div>
 
         {/* ── Bottom Row 1: Alerts & Telemetry Search ── */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

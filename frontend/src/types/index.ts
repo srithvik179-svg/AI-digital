@@ -85,3 +85,25 @@ export interface ChatMessage {
   text: string;
   timestamp: Date;
 }
+
+// Phase 14: Telemetry Relationship Graph types
+export interface RelationshipNode {
+  id: string;
+  label: string;
+  description: string;
+}
+
+export interface RelationshipEdge {
+  source: string;
+  target: string;
+  relationship_type: string;
+  correlation_strength: number;
+  description: string;
+}
+
+export interface RelationshipGraph {
+  device_id: string;
+  nodes: RelationshipNode[];
+  edges: RelationshipEdge[];
+  total_records_analyzed: number;
+}
