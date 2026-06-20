@@ -5,7 +5,7 @@ Track the active design phases, completed milestones, and tech stack details of 
 ---
 
 ## Active Phase
-- **Current Phase**: `Phase 10 - MVP Release`
+- **Current Phase**: `Phase 13 - Statistical Correlation Analysis`
 - **Status**: Completed :white_check_mark:
 
 ---
@@ -24,6 +24,9 @@ Track the active design phases, completed milestones, and tech stack details of 
 | **Phase 8** | **Deterministic Telemetry Chatbot** | Completed :white_check_mark: | Created a rule-based chatbot query engine answering CPU, GPU, battery, and disk telemetry questions strictly from data snapshots. |
 | **Phase 9** | **Natural Language Telemetry Search** | Completed :white_check_mark: | Built a search engine compiling natural language phrases to database filters, with a detailed frontend search card. |
 | **Phase 10** | **MVP Production Release** | Completed :white_check_mark: | Verified production frontend compilation (`next build`), ran end-to-end integration tests, and completed documentation updates. |
+| **Phase 11** | **Digital Twin Core Model** | Completed :white_check_mark: | Represented CPU, GPU, RAM, Battery, Disk, WiFi, and Thermal using object-oriented design and thermodynamic simulation equations. |
+| **Phase 12** | **Telemetry Relationship Mapper** | Completed :white_check_mark: | Developed a dynamic Pearson correlation analyzer to identify system dependencies, storing them in PostgreSQL. |
+| **Phase 13** | **Statistical Correlation Analysis** | Completed :white_check_mark: | Implemented Spearman rank correlation with tie-breaking, exposed an 8x8 matrix API, and created a responsive heatmap dashboard component. |
 
 ---
 

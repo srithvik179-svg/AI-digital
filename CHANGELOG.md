@@ -5,6 +5,15 @@ All notable changes to the Laptop Telemetry Digital Twin project are documented 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0] - 2026-06-20
+
+### Added
+- **Digital Twin Core Model (`services/digital_twin_model.py`)**: Object-oriented simulator engine modeling CPU, GPU, RAM, Battery, Disk, WiFi, and Thermal using thermodynamic rules.
+- **Relationship Mapper (`services/relationship_mapper.py`)**: Dynamic Pearson and Spearman correlation engine calculating hardware dependencies and saving them to PostgreSQL.
+- **Statistical Correlation API (`relationships.py`)**: Added `/relationships/matrix` endpoint for $8 \times 8$ Pearson and Spearman matrices.
+- **Correlation Matrix Heatmap UI (`CorrelationDashboard.tsx`)**: Heatmap dashboard grid with positive/negative color gradients, method toggles, and detail tooltips.
+- **Test Automation**: Added unit tests for digital twin simulation (`test_twin_model.py`), relationship mapping (`test_relationship_mapper.py`), and Spearman/Pearson matrices (`test_correlation_matrix.py`).
+
 ## [1.5.0] - 2026-06-20
 
 ### Added
