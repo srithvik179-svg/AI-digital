@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.logging import logger
 from app.schemas.telemetry import TwinQuery, TwinResponse
-from app.services.chatbot_engine import generate_chatbot_response
+from app.services.langchain_twin import query_digital_twin
 
 router = APIRouter()
 
@@ -14,11 +14,11 @@ def query_twin_agent(
 ):
     """
     Query the AI Digital Twin for laptop diagnostics and analytics.
-    Routes queries to the deterministic chatbot engine to answer strictly from telemetry data.
+    Routes queries to the RAG engine to answer strictly from telemetry data.
     """
     try:
         logger.info(f"Querying digital twin for device '{payload.device_id}' with question: '{payload.query}'")
-        result = generate_chatbot_response(
+        result = query_digital_twin(
             device_id=payload.device_id,
             query=payload.query,
             db_session=db

@@ -1,13 +1,27 @@
 """
-Unit tests for the Phase 8 Telemetry Chatbot Engine.
+Unit tests for the RAG-grounded Telemetry Chatbot Engine.
 Validates intent classification, template correctness, multi-intent handling, fallback responses, and performance.
 """
 import pytest
 from unittest.mock import MagicMock
 from datetime import datetime
 
-from app.services.chatbot_engine import generate_chatbot_response
+from app.services.langchain_twin import query_digital_twin
 from app.models.telemetry import TelemetrySnapshot, CPUMetrics, GPUMetrics, BatteryMetrics, DiskMetrics, PowerMetrics, ThermalMetrics
+
+# ─── Fixtures ─────────────────────────────────────────────────────────
+
+@pytest.fixture(autouse=True)
+def clean_chroma():
+    """Ensure a fresh ChromaDB collection for every test case to isolate queries."""
+    from app.services.langchain_twin import collection
+    try:
+        results = collection.get()
+        if results and "ids" in results and results["ids"]:
+            collection.delete(ids=results["ids"])
+    except Exception as e:
+        print(f"Error cleaning Chroma collection: {e}")
+
 
 # ─── Helpers ──────────────────────────────────────────────────────────
 
@@ -59,7 +73,7 @@ def create_mock_snapshot(
         power_source=power_source
     )
     snapshot.thermal = ThermalMetrics(
-        cpu_temperature=cpu_temperature if 'cpu_temperature' in locals() else 48.0,
+        cpu_temperature=48.0,
         fan_speed_rpm=1500
     )
     return snapshot
@@ -72,86 +86,91 @@ class TestChatbotEngine:
         """CPU query triggers CPU status template and displays correct utilization."""
         db = MagicMock()
         mock_snap = create_mock_snapshot(cpu_usage=75.5, active_process_count=120)
-        db.query.return_value.options.return_value.filter.return_value.order_by.return_value.first.return_value = mock_snap
+        db.query.return_value.options.return_value.filter.return_value.order_by.return_value.limit.return_value.all.return_value = [mock_snap]
         
-        result = generate_chatbot_response("test-laptop", "How is my CPU doing?", db)
+        result = query_digital_twin("test-laptop", "How is my CPU doing?", db)
         assert "CPU Status" in result["response"]
         assert "75.5%" in result["response"]
         assert "120 active processes" in result["response"]
         assert "test-laptop" in result["source_documents"][0]
+        assert "Source: Telemetry" in result["response"]
 
     def test_chatbot_responds_to_gpu_query(self):
         """GPU query triggers GPU status template."""
         db = MagicMock()
         mock_snap = create_mock_snapshot(gpu_usage=44.2, gpu_temperature=65.0)
-        db.query.return_value.options.return_value.filter.return_value.order_by.return_value.first.return_value = mock_snap
+        db.query.return_value.options.return_value.filter.return_value.order_by.return_value.limit.return_value.all.return_value = [mock_snap]
         
-        result = generate_chatbot_response("test-laptop", "Check my GPU load and temperature", db)
+        result = query_digital_twin("test-laptop", "Check my GPU load and temperature", db)
         assert "GPU Status" in result["response"]
         assert "44.2%" in result["response"]
         assert "65.0°C" in result["response"]
+        assert "Source: Telemetry" in result["response"]
 
     def test_chatbot_responds_to_battery_query(self):
         """Battery query triggers Battery status template."""
         db = MagicMock()
         mock_snap = create_mock_snapshot(battery_level=18.5, battery_health=82.0, power_source="battery")
-        db.query.return_value.options.return_value.filter.return_value.order_by.return_value.first.return_value = mock_snap
+        db.query.return_value.options.return_value.filter.return_value.order_by.return_value.limit.return_value.all.return_value = [mock_snap]
         
-        result = generate_chatbot_response("test-laptop", "Is my battery low?", db)
+        result = query_digital_twin("test-laptop", "Is my battery low?", db)
         assert "Battery Status" in result["response"]
         assert "18.5%" in result["response"]
         assert "82.0%" in result["response"]
         assert "Power source: BATTERY" in result["response"]
         assert "Battery is low" in result["response"]
+        assert "Source: Telemetry" in result["response"]
 
     def test_chatbot_responds_to_disk_query(self):
         """Disk query triggers Disk status template."""
         db = MagicMock()
         mock_snap = create_mock_snapshot(disk_usage=91.2)
-        db.query.return_value.options.return_value.filter.return_value.order_by.return_value.first.return_value = mock_snap
+        db.query.return_value.options.return_value.filter.return_value.order_by.return_value.limit.return_value.all.return_value = [mock_snap]
         
-        result = generate_chatbot_response("test-laptop", "disk storage check", db)
+        result = query_digital_twin("test-laptop", "disk storage check", db)
         assert "Disk Status" in result["response"]
         assert "91.2%" in result["response"]
-        assert "free space" in result["response"].lower() or "critical" in result["response"].lower()
+        assert "critical" in result["response"].lower()
+        assert "Source: Telemetry" in result["response"]
 
     def test_chatbot_handles_multi_intent_query(self):
         """Query containing both CPU and Battery keywords triggers both responses combined."""
         db = MagicMock()
         mock_snap = create_mock_snapshot(cpu_usage=15.0, battery_level=95.0)
-        db.query.return_value.options.return_value.filter.return_value.order_by.return_value.first.return_value = mock_snap
+        db.query.return_value.options.return_value.filter.return_value.order_by.return_value.limit.return_value.all.return_value = [mock_snap]
         
-        result = generate_chatbot_response("test-laptop", "show cpu and battery health", db)
+        result = query_digital_twin("test-laptop", "show cpu and battery health", db)
         assert "CPU Status" in result["response"]
         assert "Battery Status" in result["response"]
         assert "15.0%" in result["response"]
         assert "95.0%" in result["response"]
+        assert "Source: Telemetry" in result["response"]
 
     def test_chatbot_off_topic_fallback(self):
         """General questions or off-topic queries return a descriptive capability limitation text."""
         db = MagicMock()
-        result = generate_chatbot_response("test-laptop", "What is the capital of Japan?", db)
-        assert "I can only answer questions related to your device's telemetry data" in result["response"]
-        assert result["source_documents"] == []
+        mock_snap = create_mock_snapshot()
+        db.query.return_value.options.return_value.filter.return_value.order_by.return_value.limit.return_value.all.return_value = [mock_snap]
+        
+        result = query_digital_twin("test-laptop", "What is the capital of Japan?", db)
+        assert "I cannot find evidence in the telemetry logs to answer this question." in result["response"]
 
     def test_chatbot_missing_snapshot_fallback(self):
         """When no database telemetry exists, return a user-friendly error response."""
         db = MagicMock()
-        db.query.return_value.options.return_value.filter.return_value.order_by.return_value.first.return_value = None
+        db.query.return_value.options.return_value.filter.return_value.order_by.return_value.limit.return_value.all.return_value = []
         
-        result = generate_chatbot_response("test-laptop", "Check battery level", db)
-        assert "I couldn't find any telemetry data" in result["response"]
-        assert "test-laptop" in result["response"]
+        result = query_digital_twin("test-laptop", "Check battery level", db)
+        assert "I cannot find evidence in the telemetry logs to answer this question." in result["response"]
 
     def test_chatbot_latency(self):
-        """Ensure response generates in sub-millisecond range (wall clock)."""
+        """Ensure response generates in sub-200ms range (wall clock)."""
         db = MagicMock()
         mock_snap = create_mock_snapshot()
-        db.query.return_value.options.return_value.filter.return_value.order_by.return_value.first.return_value = mock_snap
+        db.query.return_value.options.return_value.filter.return_value.order_by.return_value.limit.return_value.all.return_value = [mock_snap]
         
         import time
         t0 = time.perf_counter()
-        generate_chatbot_response("test-laptop", "status of cpu, gpu, disk, battery", db)
+        query_digital_twin("test-laptop", "status of cpu, gpu, disk, battery", db)
         elapsed = time.perf_counter() - t0
-        # Success criteria is under 1 second, but deterministic rule matching is < 1 millisecond.
-        assert elapsed < 0.1, f"Chatbot response took too long: {elapsed:.3f}s"
+        assert elapsed < 1.0, f"RAG chatbot response took too long: {elapsed:.3f}s"

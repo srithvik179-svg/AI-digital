@@ -5,6 +5,26 @@ All notable changes to the Laptop Telemetry Digital Twin project are documented 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.11.0] - 2026-06-20
+
+### Added
+- **ChromaDB Vector Store RAG Ingestion**: Integrated ChromaDB for indexing and semantic query retrieval of telemetry logs.
+- **Strict Grounded Response System**:
+  - **OpenAI GPT Mode**: Implemented strict prompt templates for ChatOpenAI (GPT-4-turbo) forcing zero hallucinations, context-locked answers, and source timestamp citations.
+  - **Local Grounded Cognitive Solver**: Created a local parsing engine fallback for offline mode matching metric keywords against retrieved context, extracting values, and compiling replies citing telemetry timestamps.
+  - **Grounded Refusal Safeguard**: Guaranteed strict refusal response (*"I cannot find evidence in the telemetry logs to answer this question."*) for out-of-scope or missing telemetry.
+- **PostgreSQL Fallback Synchronization**: Implemented automatic database retrieval and ChromaDB indexing sync if the vector DB is offline or empty.
+- **Refactored APIs**: Updated `/chat/query` and `/twin/query` endpoints to utilize `query_digital_twin` from the RAG engine.
+- **Test Automation**: Refactored `test_chatbot.py` unit tests to target the new RAG engine, adding a clean Chroma autouse isolation fixture.
+
+## [1.10.0] - 2026-06-20
+
+### Added
+- **Rule-Based Reasoning Engine**: Designed custom condition evaluation operators and logic connectors (AND/OR) inside a dynamic Rule Editor dashboard component (`ReasoningEngine.tsx`).
+- **Root Cause Analysis (RCA) Engine**: Integrated analytical RCA service (`services/rca_engine.py`) using Heuristic Decision Trees and relationship correlation weights causal traversal, accompanied by an interactive troubleshooting UI panel (`RootCauseAnalysis.tsx`).
+- **AI Predictive Analytics**: Developed multi-factor system stress indexes, autoregressive time-series forecasting with confidence bounds, Isolation Forest anomaly ratings, and RUL Weibull degradation models in a unified `AIReasoningDashboard.tsx` component.
+- **Test Automation**: Added unit tests for reasoning engine (`test_reasoning_engine.py`), RCA engine (`test_rca_engine.py`), and predictive analytics (`test_ai_reasoning.py`), reaching 141 backend tests.
+
 ## [1.9.0] - 2026-06-20
 
 ### Added

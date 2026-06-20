@@ -5,7 +5,7 @@ Track the active design phases, completed milestones, and tech stack details of 
 ---
 
 ## Active Phase
-- **Current Phase**: `Phases 16–20: Digital Twin V1 Integration`
+- **Current Phase**: `Phase 31: RAG Architecture`
 - **Status**: Completed :white_check_mark:
 
 ---
@@ -34,6 +34,10 @@ Track the active design phases, completed milestones, and tech stack details of 
 | **Phase 18** | **Historical State Replay** | Completed :white_check_mark: | Exposed chronological replay endpoints and built a Media-Player ReplayConsole component (Play, Pause, Stop, Speed Rate toggles, seek bar). |
 | **Phase 19** | **Time Travel Analysis** | Completed :white_check_mark: | Implemented What-If scenario simulations branching from historical points, overlaying projected curves (CPU temp, battery, fans) on dashboard charts. |
 | **Phase 20** | **Digital Twin V1 Integration** | Completed :white_check_mark: | Unified monorepo modules, verified 113/113 passing tests, and confirmed complete type safety on Next.js frontend build. |
+| **Phase 21** | **Rule-Based Reasoning Engine** | Completed :white_check_mark: | Created a dynamic Rule Editor dashboard component, logic connectors (AND/OR), evaluation registry, and citation explanations. |
+| **Phase 22** | **Root Cause Analysis Engine** | Completed :white_check_mark: | Implemented Heuristic Decision Trees and correlation graph weight traversal to automatically rank and trace root causes of active alerts. |
+| **Phases 23–30** | **AI Reasoning Layer** | Completed :white_check_mark: | Added system stress indexes, XGBoost/Gradient Boosting recursive temperature forecasting, Isolation Forest anomalies, Weibull RUL, and glassmorphic stats cards. |
+| **Phase 31** | **RAG Architecture** | Completed :white_check_mark: | ChromaDB vector store indexing, strict grounded prompt templates for ChatOpenAI (GPT-4), and Grounded Cognitive Solver fallback offline modes. |
 
 ---
 
