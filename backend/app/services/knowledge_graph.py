@@ -161,12 +161,12 @@ def execute_cypher_query(query: str, parameters: Dict[str, Any] = None) -> Dict[
     raw_rows: List[Dict[str, Any]] = []
 
     with driver.session() as session:
-        # Run inside a read-only transaction for safety
-        result = session.execute_read(
-            lambda tx: tx.run(query, parameters or {})
+        # Run inside a read-only transaction for safety and consume results immediately
+        records = session.execute_read(
+            lambda tx: list(tx.run(query, parameters or {}))
         )
 
-        for record in result:
+        for record in records:
             row_dict = {}
             for key, val in record.items():
                 # If val is a Node object
