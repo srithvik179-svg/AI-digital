@@ -98,3 +98,10 @@ class ChatResponse(BaseModel):
     response: str
     source_documents: list[str] = []
     timestamp: datetime = Field(default_factory=datetime.utcnow)
+
+
+class SimulationRequest(BaseModel):
+    device_id: str = Field(..., example="laptop-mac-001")
+    cpu_load: float = Field(..., ge=0.0, le=100.0, example=85.0)
+    gpu_load: float = Field(..., ge=0.0, le=100.0, example=20.0)
+    duration_minutes: float = Field(..., ge=1.0, example=30.0)

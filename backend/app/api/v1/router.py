@@ -6,6 +6,7 @@ from app.api.v1.alerts import router as alerts_router
 from app.api.v1.summary import router as summary_router
 from app.api.v1.chat import router as chat_router
 from app.api.v1.search import router as search_router
+from app.api.v1.twin_state import router as twin_state_router
 
 router = APIRouter()
 
@@ -16,6 +17,7 @@ router.include_router(alerts_router,       prefix="/alerts",        tags=["alert
 router.include_router(summary_router,      prefix="/summary",       tags=["summary"])
 router.include_router(chat_router,         prefix="/chat",          tags=["chatbot"])
 router.include_router(search_router,       prefix="/search",        tags=["search"])
+router.include_router(twin_state_router,  prefix="/twin-state",    tags=["digital-twin-core-model"])
 
 @router.get("/health", tags=["health"])
 def health_check():
