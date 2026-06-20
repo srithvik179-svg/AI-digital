@@ -68,6 +68,9 @@ class TelemetryResponse(BaseModel):
     thermal_state: Optional[str] = None
     power_draw_watts: Optional[float] = None
     voltage_mv: Optional[float] = None
+    # Phase 5: health score fields
+    health_score: Optional[float] = None
+    health_category: Optional[str] = None
 
     class Config:
         from_attributes = True

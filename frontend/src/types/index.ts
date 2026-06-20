@@ -37,6 +37,20 @@ export interface TelemetryData {
   signal_strength_dbm?: number;
   ssid?: string;
   link_speed_mbps?: number;
+
+  // Phase 5: Health Score Engine
+  health_score?: number;
+  health_category?: 'Healthy' | 'Warning' | 'Critical' | string;
+  health_breakdown?: {
+    cpu: number;
+    memory: number;
+    gpu: number;
+    temperature: number;
+    battery: number;
+    disk: number;
+    wifi: number;
+  };
+  health_recommendations?: string[];
 }
 
 export interface ChatMessage {

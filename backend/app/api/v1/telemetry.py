@@ -10,6 +10,7 @@ import uuid
 
 from app.core.database import get_db
 from app.core.logging import logger
+from app.services.health_score import compute_health_score
 from app.models.telemetry import (
     TelemetrySnapshot,
     CPUMetrics,
@@ -63,6 +64,20 @@ def flatten_snapshot(snapshot: TelemetrySnapshot) -> Dict[str, Any]:
     Helper function to flatten a TelemetrySnapshot model and its related entities
     into a dictionary structure matching TelemetryResponse.
     """
+    # Compute live health score from snapshot data
+    hs = compute_health_score(
+        cpu_usage=snapshot.cpu.cpu_usage if snapshot.cpu else 0,
+        memory_usage=snapshot.memory.memory_usage if snapshot.memory else 0,
+        disk_usage=snapshot.disk.disk_usage if snapshot.disk else 0,
+        cpu_temperature=snapshot.thermal.cpu_temperature if snapshot.thermal else 45,
+        battery_level=snapshot.battery.battery_level if snapshot.battery else 100,
+        battery_health=snapshot.battery.battery_health if snapshot.battery else 100,
+        gpu_usage=snapshot.gpu.gpu_usage if snapshot.gpu else None,
+        signal_strength_dbm=snapshot.wifi.signal_strength_dbm if snapshot.wifi else None,
+        power_source=snapshot.power.power_source if snapshot.power else "ac",
+        thermal_state=snapshot.thermal.thermal_state if snapshot.thermal else None,
+    )
+
     return {
         "id": snapshot.id,
         "device_id": snapshot.device_id,
@@ -98,6 +113,12 @@ def flatten_snapshot(snapshot: TelemetrySnapshot) -> Dict[str, Any]:
         "thermal_state": snapshot.thermal.thermal_state if snapshot.thermal else None,
         "power_draw_watts": snapshot.power.power_draw_watts if snapshot.power else None,
         "voltage_mv": snapshot.power.voltage_mv if snapshot.power else None,
+
+        # Phase 5: health score
+        "health_score": snapshot.health_score if snapshot.health_score is not None else hs.score,
+        "health_category": snapshot.health_category if snapshot.health_category else hs.category,
+        "health_breakdown": hs.breakdown,
+        "health_recommendations": hs.recommendations,
     }
 
 @router.post("/", response_model=TelemetryResponse)
@@ -344,7 +365,25 @@ async def generate_mock_stream(websocket: WebSocket, device_id: str):
                 battery_level = max(0.0, battery_level - 0.2)
                 if battery_level <= 15.0:
                     power_source = "ac"
-            
+
+            mock_gpu_usage = round(random.uniform(0.0, 30.0), 1)
+            mock_signal_dbm = random.randint(-75, -40)
+            thermal_state = "nominal" if cpu_temp < 75 else "serious"
+
+            # Compute health score for this mock tick
+            hs = compute_health_score(
+                cpu_usage=cpu_usage,
+                memory_usage=memory_usage,
+                disk_usage=disk_usage,
+                cpu_temperature=cpu_temp,
+                battery_level=round(battery_level, 1),
+                battery_health=94.0,
+                gpu_usage=mock_gpu_usage,
+                signal_strength_dbm=float(mock_signal_dbm),
+                power_source=power_source,
+                thermal_state=thermal_state,
+            )
+
             # Form standard telemetry dict matching TelemetryResponse
             mock_data = {
                 "type": "telemetry_update",
@@ -352,40 +391,46 @@ async def generate_mock_stream(websocket: WebSocket, device_id: str):
                     "id": str(uuid.uuid4()),
                     "device_id": device_id,
                     "timestamp": datetime.utcnow().isoformat(),
-                    
+
                     "cpu_usage": cpu_usage,
                     "memory_usage": memory_usage,
                     "disk_usage": disk_usage,
-                    
+
                     "cpu_temperature": cpu_temp,
                     "battery_level": round(battery_level, 1),
                     "battery_health": 94.0,
                     "fan_speed": fan_speed,
-                    
+
                     "power_source": power_source,
                     "active_process_count": random.randint(90, 140),
-                    
+
                     # Extended mock fields
                     "cpu_frequency_mhz": 2800.0 + random.uniform(-400.0, 400.0),
-                    "gpu_usage": round(random.uniform(0.0, 30.0), 1),
+                    "gpu_usage": mock_gpu_usage,
                     "gpu_temperature": max(35.0, cpu_temp - 5.0),
                     "gpu_memory_usage": round(random.uniform(5.0, 20.0), 1),
                     "battery_temperature": round(random.uniform(28.0, 35.0), 1),
                     "cycle_count": 142,
                     "read_bytes_sec": random.randint(1000, 500000),
                     "write_bytes_sec": random.randint(500, 200000),
-                    "signal_strength_dbm": random.randint(-75, -40),
+                    "signal_strength_dbm": mock_signal_dbm,
                     "ssid": "Dell_Secure_WiFi",
                     "link_speed_mbps": 866,
-                    "thermal_state": "nominal" if cpu_temp < 75 else "serious",
+                    "thermal_state": thermal_state,
                     "power_draw_watts": round(random.uniform(5.0, 25.0), 1),
-                    "voltage_mv": 11800.0 + random.uniform(-200.0, 200.0)
+                    "voltage_mv": 11800.0 + random.uniform(-200.0, 200.0),
+
+                    # Phase 5: Health Score
+                    "health_score": hs.score,
+                    "health_category": hs.category,
+                    "health_breakdown": hs.breakdown,
+                    "health_recommendations": hs.recommendations,
                 }
             }
-            
+
             # Send message to client
             await websocket.send_text(json.dumps(mock_data))
-            
+
             # Sleep 2 seconds between ticks
             await asyncio.sleep(2)
     except asyncio.CancelledError:

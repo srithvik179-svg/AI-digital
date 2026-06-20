@@ -16,6 +16,7 @@ from app.models.telemetry import (
     ThermalMetrics,
     PowerMetrics
 )
+from app.services.health_score import compute_health_score
 
 # Header mappings (Standard Key -> List of case-insensitive aliases)
 HEADER_ALIASES: Dict[str, List[str]] = {
@@ -257,11 +258,27 @@ def bulk_insert_normalized_telemetry(db: Session, batch: List[Dict[str, Any]]) -
         snapshot_id = str(uuid.uuid4())
         snapshot_ids.append(snapshot_id)
         
+        # Compute health score for this snapshot
+        hs = compute_health_score(
+            cpu_usage=row["cpu_usage"],
+            memory_usage=row["memory_usage"],
+            disk_usage=row["disk_usage"],
+            cpu_temperature=row["cpu_temperature"],
+            battery_level=row["battery_level"],
+            battery_health=row["battery_health"],
+            gpu_usage=get_val(row, "gpu_usage", None),
+            signal_strength_dbm=get_val(row, "signal_strength_dbm", None),
+            power_source=row.get("power_source", "ac"),
+            thermal_state=get_val(row, "thermal_state", None),
+        )
+
         # 1. Telemetry Snapshot
         snapshot_mappings.append({
             "id": snapshot_id,
             "device_id": row["device_id"],
-            "timestamp": row.get("timestamp") or datetime.utcnow()
+            "timestamp": row.get("timestamp") or datetime.utcnow(),
+            "health_score": hs.score,
+            "health_category": hs.category,
         })
         
         # 2. CPU Metrics

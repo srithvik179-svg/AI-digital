@@ -10,6 +10,8 @@ class TelemetrySnapshot(Base):
     device_id = Column(String(255), nullable=False, index=True)
     timestamp = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    health_score = Column(Float, nullable=True, index=True)
+    health_category = Column(String(20), nullable=True, index=True)
 
     # 1-to-1 relationships to child entities
     cpu = relationship("CPUMetrics", back_populates="snapshot", uselist=False, cascade="all, delete-orphan")
