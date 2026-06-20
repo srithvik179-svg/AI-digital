@@ -14,3 +14,7 @@ python-multipart>=0.0.6
 pytest>=7.0
 httpx>=0.20
 neo4j>=5.12.0
+scikit-learn>=1.2.0
+xgboost>=1.7.0
+pandas>=2.0.0
+numpy>=1.22.0

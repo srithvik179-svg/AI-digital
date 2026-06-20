@@ -15,6 +15,7 @@ import ReplayConsole from '@/components/dashboard/ReplayConsole';
 import TimeTravelPlayground from '@/components/dashboard/TimeTravelPlayground';
 import ReasoningEngine from '@/components/dashboard/ReasoningEngine';
 import RootCauseAnalysis from '@/components/dashboard/RootCauseAnalysis';
+import AIReasoningDashboard from '@/components/dashboard/AIReasoningDashboard';
 import { Terminal, Settings, Play, ShieldAlert, Cpu, CheckCircle2, Upload, AlertCircle, Loader } from 'lucide-react';
 
 const DEVICE_ID = "laptop-mac-001";
@@ -365,6 +366,9 @@ export default function Dashboard() {
 
         {/* ── 5-Panel Telemetry Charts — Full Width ── */}
         <TelemetryCharts data={telemetryHistory} projections={projections} />
+
+        {/* ── AI Reasoning & Predictive Analytics Layer (Phases 23-30) ── */}
+        <AIReasoningDashboard deviceId={DEVICE_ID} tickCount={tickCount} />
 
         {/* Phase 18 & 19: Historical Replay & Time Travel Scenario Planner */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

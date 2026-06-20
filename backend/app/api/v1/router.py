@@ -11,6 +11,7 @@ from app.api.v1.relationships import router as relationships_router
 from app.api.v1.knowledge_graph import router as knowledge_graph_router
 from app.api.v1.reasoning import router as reasoning_router
 from app.api.v1.rca import router as rca_router
+from app.api.v1.ai_reasoning import router as ai_reasoning_router
 
 router = APIRouter()
 
@@ -26,6 +27,7 @@ router.include_router(relationships_router,prefix="/relationships", tags=["relat
 router.include_router(knowledge_graph_router, prefix="/knowledge-graph", tags=["knowledge-graph"])
 router.include_router(reasoning_router,       prefix="/reasoning",       tags=["reasoning"])
 router.include_router(rca_router,             prefix="/rca",             tags=["rca"])
+router.include_router(ai_reasoning_router,    prefix="/ai-reasoning",    tags=["ai-reasoning"])
 
 @router.get("/health", tags=["health"])
 def health_check():
@@ -33,3 +35,4 @@ def health_check():
     Health check endpoint for Kubernetes, Docker, or monitoring tools.
     """
     return {"status": "healthy", "version": "1.0.0"}
+
