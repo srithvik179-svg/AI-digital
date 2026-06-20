@@ -14,6 +14,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **AI Vector Store Batching**: Buffered and batched ChromaDB vector embeddings for 1 in 50 rows to protect ChromaDB against performance lags during bulk uploads.
 - **Test Automation**: Wrote integration performance test (`app/tests/test_ingestion.py`) uploading 50,000+ mock records and verifying import speed (<1.5s in memory).
 
+### Fixed
+- **WebSocket URL**: Corrected the WebSocket connection path configuration in `docker-compose.yml` and `.env` to point to `/api/v1/telemetry/ws` instead of `/api/v1/ws`, enabling successful dashboard live stream connection.
+
 ## [1.0.0] - 2026-06-20
 
 ### Added
