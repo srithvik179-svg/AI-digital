@@ -5,7 +5,7 @@ Track the active design phases, completed milestones, and tech stack details of 
 ---
 
 ## Active Phase
-- **Current Phase**: `Phase 15 - Build Knowledge Graph`
+- **Current Phase**: `Phases 16–20: Digital Twin V1 Integration`
 - **Status**: Completed :white_check_mark:
 
 ---
@@ -29,6 +29,11 @@ Track the active design phases, completed milestones, and tech stack details of 
 | **Phase 13** | **Statistical Correlation Analysis** | Completed :white_check_mark: | Implemented Spearman rank correlation with tie-breaking, exposed an 8x8 matrix API, and created a responsive heatmap dashboard component. |
 | **Phase 14** | **Dependency Graph Engine** | Completed :white_check_mark: | Designed and integrated an interactive directed SVG graph on the frontend showing hardware telemetry causal connections and animated flow states. |
 | **Phase 15** | **Build Knowledge Graph** | Completed :white_check_mark: | Provisioned a Neo4j container and wrote sync and Cypher terminal routes, allowing custom queries and SVG circle layouts on the dashboard. |
+| **Phase 16** | **Component Interaction Engine** | Completed :white_check_mark: | Modeled step-by-step thermodynamic dissipation, active fan cooling ramp-rates, thermal clock frequency throttling, and battery CC/CV charging curves. |
+| **Phase 17** | **Real-Time Twin State Updates** | Completed :white_check_mark: | Streamed live digital twin states (`twin_state` dicts) on every WebSocket update to enrich the React dashboard dials. |
+| **Phase 18** | **Historical State Replay** | Completed :white_check_mark: | Exposed chronological replay endpoints and built a Media-Player ReplayConsole component (Play, Pause, Stop, Speed Rate toggles, seek bar). |
+| **Phase 19** | **Time Travel Analysis** | Completed :white_check_mark: | Implemented What-If scenario simulations branching from historical points, overlaying projected curves (CPU temp, battery, fans) on dashboard charts. |
+| **Phase 20** | **Digital Twin V1 Integration** | Completed :white_check_mark: | Unified monorepo modules, verified 113/113 passing tests, and confirmed complete type safety on Next.js frontend build. |
 
 ---
 

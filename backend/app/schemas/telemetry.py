@@ -71,6 +71,9 @@ class TelemetryResponse(BaseModel):
     # Phase 5: health score fields
     health_score: Optional[float] = None
     health_category: Optional[str] = None
+    
+    # Phase 17: Digital Twin State representation
+    twin_state: Optional[Dict[str, Any]] = None
 
     class Config:
         from_attributes = True
@@ -105,3 +108,12 @@ class SimulationRequest(BaseModel):
     cpu_load: float = Field(..., ge=0.0, le=100.0, example=85.0)
     gpu_load: float = Field(..., ge=0.0, le=100.0, example=20.0)
     duration_minutes: float = Field(..., ge=1.0, example=30.0)
+
+
+class WhatIfRequest(BaseModel):
+    device_id: str = Field(..., example="laptop-mac-001")
+    start_timestamp: Optional[datetime] = Field(default=None, example="2026-06-20T12:00:00Z")
+    cpu_load: float = Field(..., ge=0.0, le=100.0, example=85.0)
+    gpu_load: float = Field(..., ge=0.0, le=100.0, example=20.0)
+    duration_minutes: float = Field(..., ge=1.0, example=30.0)
+    power_source: Optional[str] = Field(default=None, example="battery")

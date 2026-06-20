@@ -205,41 +205,184 @@ class VirtualLaptop:
         self.health_score = snapshot.health_score
         self.health_category = snapshot.health_category
 
+    def step_simulation(
+        self,
+        cpu_load: float,
+        gpu_load: float,
+        power_source: Optional[str] = None,
+        delta_t_mins: float = 1.0
+    ) -> Dict[str, Any]:
+        """
+        Executes a single step of the simulation, updating component models.
+        - delta_t_mins is the step duration in minutes (default 1.0)
+        """
+        # 1. Resolve power source
+        if power_source is None:
+            power_source = self.battery.power_source
+        self.battery.power_source = power_source
+
+        # 2. CPU/GPU usages
+        self.cpu.current_usage = cpu_load
+        self.gpu.current_usage = gpu_load
+
+        # 3. Thermal Throttling
+        # Threshold: if temp >= 85 C, throttle frequency.
+        # Max temp before full throttle: 105 C.
+        current_temp = self.thermal.cpu_temperature
+        throttle_ratio = 1.0
+        if current_temp >= 85.0:
+            # Linear throttling from 85C (1.0) to 105C (0.2)
+            throttle_ratio = max(0.2, 1.0 - 0.04 * (current_temp - 85.0))
+        
+        # CPU Frequency drops
+        base_freq = 3500.0  # MHz
+        self.cpu.frequency_mhz = base_freq * throttle_ratio
+
+        # 4. Thermodynamic Dissipation
+        # CPU/GPU heat generation is scaled by CPU frequency/throttling
+        cpu_heat_factor = 0.25 * throttle_ratio
+        gpu_heat_factor = 0.15
+        heat_generation = (cpu_load * cpu_heat_factor + gpu_load * gpu_heat_factor)  # per minute
+        
+        # Passive cooling
+        ambient_temp = 25.0
+        temp_above_ambient = max(0.0, current_temp - ambient_temp)
+        passive_cooling = 0.03 * temp_above_ambient
+        
+        # Active cooling (fans)
+        # Fan ramp speed: max change 1000 RPM per minute
+        target_fan = self.thermal.target_fan_speed_rpm
+        fan_speed_diff = target_fan - self.thermal.fan_speed_rpm
+        fan_ramp = 1000.0 * delta_t_mins
+        if abs(fan_speed_diff) <= fan_ramp:
+            self.thermal.fan_speed_rpm = target_fan
+        else:
+            sign = 1 if fan_speed_diff > 0 else -1
+            self.thermal.fan_speed_rpm += int(sign * fan_ramp)
+            
+        active_cooling = 0.00005 * self.thermal.fan_speed_rpm * temp_above_ambient
+        
+        net_heat = heat_generation - passive_cooling - active_cooling
+        new_temp = current_temp + net_heat * delta_t_mins
+        self.thermal.cpu_temperature = max(ambient_temp, min(105.0, new_temp))
+        
+        # Update thermal state category based on new temperature
+        if self.thermal.cpu_temperature < 60.0:
+            self.thermal.thermal_state = "nominal"
+        elif self.thermal.cpu_temperature < 75.0:
+            self.thermal.thermal_state = "moderate"
+        elif self.thermal.cpu_temperature < 90.0:
+            self.thermal.thermal_state = "serious"
+        else:
+            self.thermal.thermal_state = "critical"
+
+        # 5. Power Draw & Battery Dynamics
+        # Base power: 10W on AC, 8W on battery
+        # CPU power draw: 35W max under load, GPU: 20W max
+        cpu_watts = 35.0 * (cpu_load / 100.0) * throttle_ratio
+        gpu_watts = 20.0 * (gpu_load / 100.0)
+        aux_watts = 7.0  # RAM, Disk, screen, etc.
+        component_watts = cpu_watts + gpu_watts + aux_watts
+        
+        total_wh = 56.0
+        
+        if power_source == "ac":
+            # Charging
+            # In CV (constant voltage) mode, charging power decreases near 100%
+            current_level = self.battery.level
+            if current_level >= 100.0:
+                charging_watts = 0.0
+                self.battery.level = 100.0
+            else:
+                # CC/CV model: charge speed decreases as level -> 100%
+                charging_watts = 45.0 * max(0.05, 1.0 - (current_level / 100.0))
+                # Add energy to battery
+                added_wh = charging_watts * (delta_t_mins / 60.0)
+                current_wh = (current_level / 100.0) * total_wh
+                new_wh = min(total_wh, current_wh + added_wh)
+                self.battery.level = (new_wh / total_wh) * 100.0
+                
+            power_draw = 15.0 + component_watts + charging_watts
+        else:
+            # Discharging on Battery
+            power_draw = component_watts
+            current_level = self.battery.level
+            current_wh = (current_level / 100.0) * total_wh
+            consumed_wh = power_draw * (delta_t_mins / 60.0)
+            new_wh = max(0.0, current_wh - consumed_wh)
+            self.battery.level = (new_wh / total_wh) * 100.0
+            
+            # Record cycle count throughput and health wear
+            discharge_pct = (consumed_wh / total_wh) * 100.0
+            # Accumulate fractional cycle count
+            self.battery.cycle_count = int(self.battery.cycle_count + (discharge_pct / 100.0))
+            # Degradation: 0.0003% health drop per discharge_pct
+            self.battery.health = max(0.0, self.battery.health - 0.0003 * discharge_pct)
+
+        # Update disk wear
+        write_speed = 50 * 1024 + int((cpu_load / 100.0) * 50 * 1024**2)
+        self.disk.write_bytes_sec = write_speed
+        self.disk.read_bytes_sec = 20 * 1024 + int((cpu_load / 100.0) * 20 * 1024**2)
+        hourly_tb = (write_speed * delta_t_mins * 60) / (1024**4)
+        self.disk.cumulative_write_wear_tb += hourly_tb
+
+        # Update battery temp slightly based on power draw
+        if power_source == "ac" and self.battery.level < 99.0:
+            self.battery.temperature = 30.0 + 5.0 * (power_draw / 60.0)
+        else:
+            self.battery.temperature = 28.0 + 3.0 * (power_draw / 60.0)
+
+        # Update active processes slightly
+        self.cpu.active_process_count = int(100 + cpu_load * 0.5)
+        
+        # We can update power draw on components if needed
+        # Return serialized state
+        return self.get_state_dict()
+
+    def simulate_time_series_workload(
+        self,
+        cpu_load: float,
+        gpu_load: float,
+        duration_mins: float,
+        power_source: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
+        """
+        Runs a step-by-step thermodynamic and power simulation, stepping at 1-minute intervals.
+        Returns a list of state dictionaries for each minute.
+        """
+        states = []
+        steps = int(max(1.0, duration_mins))
+        for _ in range(steps):
+            state = self.step_simulation(
+                cpu_load=cpu_load,
+                gpu_load=gpu_load,
+                power_source=power_source,
+                delta_t_mins=1.0
+            )
+            states.append(state)
+        return states
+
     def simulate_workload(self, cpu_load: float, gpu_load: float, duration_mins: float) -> Dict[str, Any]:
         """
         Runs a thermodynamic and power-drain simulation of the laptop twin.
         Projects new temperature and battery level without modifying actual logged database states.
+        Keeps backward compatibility with the original simulate_workload structure.
         """
-        # 1. Thermodynamics: higher workloads generate thermal energy
-        base_thermal_dissipation = 0.5 # cooling rate per minute
-        heat_generation = (cpu_load * 0.18 + gpu_load * 0.12) # heat units generated per minute
+        initial_temp = self.thermal.cpu_temperature
+        initial_fan = self.thermal.fan_speed_rpm
+        initial_bat = self.battery.level
         
-        net_heat = (heat_generation - base_thermal_dissipation) * (duration_mins / 5.0)
-        projected_temp = max(40.0, min(99.0, self.thermal.cpu_temperature + net_heat))
+        # Run step simulation to get the final state
+        states = self.simulate_time_series_workload(
+            cpu_load=cpu_load,
+            gpu_load=gpu_load,
+            duration_mins=duration_mins
+        )
+        final_state = states[-1] if states else self.get_state_dict()
         
-        # 2. Fan RPM adjusts dynamically to temperature
-        if projected_temp < 50.0:
-            projected_fan_rpm = 1200
-        elif projected_temp < 65.0:
-            projected_fan_rpm = 2500
-        elif projected_temp < 78.0:
-            projected_fan_rpm = 4000
-        else:
-            projected_fan_rpm = 5800
-
-        # 3. Battery Drain: power draw depends on workload
-        # Base power draw is 10 Watts, max load draws 65 Watts
-        power_draw_watts = 10.0 + (cpu_load / 100.0) * 40.0 + (gpu_load / 100.0) * 15.0
-        
-        # Calculate battery capacity in Watt-Hours (e.g. assume a standard 56 Wh battery)
-        total_wh = 56.0
-        current_wh = (self.battery.level / 100.0) * total_wh
-        
-        # Consumed energy: Wh = Watts * Hours
-        consumed_wh = power_draw_watts * (duration_mins / 60.0)
-        projected_wh = max(0.0, current_wh - consumed_wh)
-        
-        projected_battery_level = (projected_wh / total_wh) * 100.0
+        cpu_watts = 35.0 * (cpu_load / 100.0)
+        gpu_watts = 20.0 * (gpu_load / 100.0)
+        power_draw_watts = 10.0 + cpu_watts + gpu_watts
         
         return {
             "device_id": self.device_id,
@@ -249,14 +392,14 @@ class VirtualLaptop:
                 "duration_minutes": duration_mins
             },
             "initial_state": {
-                "cpu_temperature": self.thermal.cpu_temperature,
-                "fan_speed_rpm": self.thermal.fan_speed_rpm,
-                "battery_level": self.battery.level
+                "cpu_temperature": initial_temp,
+                "fan_speed_rpm": initial_fan,
+                "battery_level": initial_bat
             },
             "projected_state": {
-                "cpu_temperature": round(projected_temp, 1),
-                "fan_speed_rpm": projected_fan_rpm,
-                "battery_level": round(projected_battery_level, 1),
+                "cpu_temperature": final_state["components"]["thermal"]["cpu_temperature"],
+                "fan_speed_rpm": final_state["components"]["thermal"]["fan_speed_rpm"],
+                "battery_level": final_state["components"]["battery"]["level"],
                 "power_draw_watts": round(power_draw_watts, 1)
             }
         }

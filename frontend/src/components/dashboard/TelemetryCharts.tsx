@@ -19,6 +19,14 @@ import {
 
 interface TelemetryChartsProps {
   data: TelemetryData[];
+  projections?: {
+    timestamp: string;
+    cpu_usage: number;
+    cpu_temperature: number;
+    battery_level: number;
+    fan_speed: number;
+    cpu_frequency_mhz: number;
+  }[] | null;
 }
 
 /* ─── Shared chart config ─────────────────────────────── */
@@ -41,16 +49,20 @@ const DarkTooltip = ({ active, payload, label, unit }: any) => {
   return (
     <div className="bg-[#0d1424]/95 border border-white/10 rounded-xl p-3 shadow-2xl backdrop-blur-md text-xs min-w-[140px]">
       <p className="text-slate-400 font-semibold mb-2">{label}</p>
-      {payload.map((entry: any, i: number) => (
-        <div key={i} className="flex items-center gap-2 mt-1">
-          <span className="w-2 h-2 rounded-full shrink-0" style={{ background: entry.color }} />
-          <span className="text-slate-300">{entry.name}:</span>
-          <span className="font-bold text-white ml-auto pl-2">
-            {typeof entry.value === 'number' ? entry.value.toFixed(1) : entry.value}
-            {unit ?? ''}
-          </span>
-        </div>
-      ))}
+      {payload.map((entry: any, i: number) => {
+        // Skip nulls or undefined values in tooltip to avoid empty rows
+        if (entry.value == null) return null;
+        return (
+          <div key={i} className="flex items-center gap-2 mt-1">
+            <span className="w-2 h-2 rounded-full shrink-0" style={{ background: entry.color }} />
+            <span className="text-slate-300">{entry.name}:</span>
+            <span className="font-bold text-white ml-auto pl-2">
+              {typeof entry.value === 'number' ? entry.value.toFixed(1) : entry.value}
+              {unit ?? ''}
+            </span>
+          </div>
+        );
+      })}
     </div>
   );
 };
@@ -140,22 +152,69 @@ const GradientDefs = () => (
 
 /* ════════════════════════════════════════════════════════
    MAIN COMPONENT
-════════════════════════════════════════════════════════ */
-export const TelemetryCharts: React.FC<TelemetryChartsProps> = ({ data }) => {
+   ════════════════════════════════════════════════════════ */
+export const TelemetryCharts: React.FC<TelemetryChartsProps> = ({ data, projections }) => {
   const chartData = useMemo(() => {
-    return [...data].reverse().map(item => {
+    const base = [...data].reverse().map(item => {
       const time = new Date(item.timestamp);
       return {
         ...item,
         timeStr: time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-        // normalize optional fields
         gpu_usage: item.gpu_usage ?? 0,
         gpu_memory_usage: item.gpu_memory_usage ?? 0,
         signal_pct: item.signal_strength_dbm != null ? dbmToPercent(item.signal_strength_dbm) : null,
         signal_dbm: item.signal_strength_dbm ?? null,
+        projected_cpu_temperature: null as number | null,
+        projected_battery_level: null as number | null,
+        projected_fan_speed: null as number | null,
+        projected_cpu_usage: null as number | null,
       };
     });
-  }, [data]);
+
+    if (!projections || projections.length === 0) return base;
+
+    const projStart = new Date(projections[0].timestamp);
+    let splitIdx = -1;
+    let minDiff = Infinity;
+    
+    for (let i = 0; i < base.length; i++) {
+      const diff = Math.abs(new Date(base[i].timestamp).getTime() - projStart.getTime());
+      if (diff < minDiff) {
+        minDiff = diff;
+        splitIdx = i;
+      }
+    }
+
+    if (splitIdx !== -1) {
+      base[splitIdx].projected_cpu_temperature = base[splitIdx].cpu_temperature;
+      base[splitIdx].projected_battery_level = base[splitIdx].battery_level;
+      base[splitIdx].projected_fan_speed = base[splitIdx].fan_speed;
+      base[splitIdx].projected_cpu_usage = base[splitIdx].cpu_usage;
+    }
+
+    const projPoints = projections.map(proj => {
+      const time = new Date(proj.timestamp);
+      return {
+        id: `proj-${proj.timestamp}`,
+        device_id: base[0]?.device_id || 'test-laptop',
+        timestamp: proj.timestamp,
+        timeStr: `🔮 ` + time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        cpu_usage: null as any,
+        memory_usage: null as any,
+        disk_usage: null as any,
+        cpu_temperature: null as any,
+        battery_level: null as any,
+        fan_speed: null as any,
+        power_source: null as any,
+        projected_cpu_temperature: proj.cpu_temperature,
+        projected_battery_level: proj.battery_level,
+        projected_fan_speed: proj.fan_speed,
+        projected_cpu_usage: proj.cpu_usage,
+      };
+    });
+
+    return [...base, ...projPoints];
+  }, [data, projections]);
 
   const latest = data[0];
 
@@ -202,6 +261,7 @@ export const TelemetryCharts: React.FC<TelemetryChartsProps> = ({ data }) => {
             <Area type="monotone" dataKey="cpu_usage" name="CPU" stroke="#6366f1" strokeWidth={2.5} fill="url(#gCpu)" dot={false} />
             <Area type="monotone" dataKey="memory_usage" name="Memory" stroke="#a855f7" strokeWidth={2} fill="url(#gMem)" dot={false} />
             <Area type="monotone" dataKey="disk_usage" name="Disk" stroke="#22d3ee" strokeWidth={1.5} fill="url(#gDisk)" dot={false} strokeDasharray="4 2" />
+            <Line type="monotone" dataKey="projected_cpu_usage" name="Projected CPU" stroke="#818cf8" strokeWidth={2.5} dot={false} strokeDasharray="5 5" connectNulls />
           </AreaChart>
         </ResponsiveContainer>
       </ChartPanel>
@@ -255,6 +315,8 @@ export const TelemetryCharts: React.FC<TelemetryChartsProps> = ({ data }) => {
             <ReferenceLine yAxisId="temp" y={60} stroke="#f59e0b" strokeDasharray="4 2" strokeOpacity={0.4} />
             <Line yAxisId="temp" type="monotone" dataKey="cpu_temperature" name="CPU Temp" stroke="#f97316" strokeWidth={2.5} dot={false} />
             <Bar yAxisId="fan" dataKey="fan_speed" name="Fan RPM" fill="#334155" opacity={0.6} radius={[2, 2, 0, 0]} />
+            <Line yAxisId="temp" type="monotone" dataKey="projected_cpu_temperature" name="Projected Temp" stroke="#fb923c" strokeWidth={2.5} dot={false} strokeDasharray="5 5" connectNulls />
+            <Line yAxisId="fan" type="monotone" dataKey="projected_fan_speed" name="Projected Fan" stroke="#94a3b8" strokeWidth={1.5} dot={false} strokeDasharray="5 5" connectNulls />
           </ComposedChart>
         </ResponsiveContainer>
       </ChartPanel>
@@ -285,6 +347,7 @@ export const TelemetryCharts: React.FC<TelemetryChartsProps> = ({ data }) => {
             <ReferenceLine y={20} stroke="#ef4444" strokeDasharray="4 2" strokeOpacity={0.5} label={{ value: 'Low', fill: '#ef4444', fontSize: 10, position: 'insideTopRight' }} />
             <Area type="monotone" dataKey="battery_level" name="Battery %" stroke="#10b981" strokeWidth={2.5} fill="url(#gBat)" dot={false} />
             <Line type="monotone" dataKey="battery_health" name="Health %" stroke="#f59e0b" strokeWidth={1.5} dot={false} strokeDasharray="4 2" />
+            <Line type="monotone" dataKey="projected_battery_level" name="Projected Battery %" stroke="#34d399" strokeWidth={2.5} dot={false} strokeDasharray="5 5" connectNulls />
           </AreaChart>
         </ResponsiveContainer>
       </ChartPanel>

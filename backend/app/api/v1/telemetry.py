@@ -26,6 +26,7 @@ from app.models.telemetry import (
 )
 from app.schemas.telemetry import TelemetryCreate, TelemetryResponse
 from app.services.langchain_twin import index_telemetry_in_vector_db
+from app.services.digital_twin_model import VirtualLaptop
 from app.services.ingestion import (
     resolve_headers,
     clean_and_validate_row,
@@ -148,6 +149,12 @@ def flatten_snapshot(snapshot: TelemetrySnapshot) -> Dict[str, Any]:
             "severity": nl.severity,
             "generated_in_ms": nl.generated_in_ms,
         },
+        
+        # Phase 17: Digital Twin State
+        "twin_state": (
+            VirtualLaptop(snapshot.device_id).get_state_dict() if not snapshot
+            else (lambda l: (l.update_state(snapshot), l.get_state_dict())[1])(VirtualLaptop(snapshot.device_id))
+        )
     }
 
 @router.post("/", response_model=TelemetryResponse)
@@ -360,6 +367,8 @@ async def generate_mock_stream(websocket: WebSocket, device_id: str):
     import random
     logger.info(f"Starting mock telemetry stream for {device_id}")
     
+    laptop = VirtualLaptop(device_id)
+    
     # Starting conditions
     cpu_temp = 48.0
     fan_speed = 1200
@@ -450,13 +459,62 @@ async def generate_mock_stream(websocket: WebSocket, device_id: str):
                 link_speed_mbps=866,
             )
 
+            # Create a mock snapshot to update the laptop model
+            mock_snap = TelemetrySnapshot(
+                id=str(uuid.uuid4()),
+                device_id=device_id,
+                timestamp=datetime.utcnow(),
+                health_score=hs.score,
+                health_category=hs.category
+            )
+            mock_snap.cpu = CPUMetrics(
+                cpu_usage=cpu_usage,
+                active_process_count=random.randint(90, 140),
+                cpu_frequency_mhz=2800.0 + random.uniform(-400.0, 400.0)
+            )
+            mock_snap.gpu = GPUMetrics(
+                gpu_usage=mock_gpu_usage,
+                gpu_temperature=max(35.0, cpu_temp - 5.0),
+                gpu_memory_usage=round(random.uniform(5.0, 20.0), 1)
+            )
+            mock_snap.memory = MemoryMetrics(memory_usage=memory_usage)
+            mock_snap.battery = BatteryMetrics(
+                battery_level=round(battery_level, 1),
+                battery_health=94.0,
+                battery_temperature=mock_bat_temp,
+                cycle_count=142
+            )
+            mock_snap.disk = DiskMetrics(
+                disk_usage=disk_usage,
+                read_bytes_sec=random.randint(1000, 500000),
+                write_bytes_sec=random.randint(500, 200000)
+            )
+            mock_snap.wifi = WiFiMetrics(
+                signal_strength_dbm=mock_signal_dbm,
+                ssid="Dell_Secure_WiFi",
+                link_speed_mbps=866
+            )
+            mock_snap.thermal = ThermalMetrics(
+                cpu_temperature=cpu_temp,
+                fan_speed_rpm=fan_speed,
+                thermal_state=thermal_state
+            )
+            mock_snap.power = PowerMetrics(
+                power_source=power_source,
+                power_draw_watts=round(random.uniform(5.0, 25.0), 1),
+                voltage_mv=11800.0 + random.uniform(-200.0, 200.0)
+            )
+            
+            laptop.update_state(mock_snap)
+            twin_state = laptop.get_state_dict()
+
             # Form standard telemetry dict matching TelemetryResponse
             mock_data = {
                 "type": "telemetry_update",
                 "data": {
-                    "id": str(uuid.uuid4()),
+                    "id": mock_snap.id,
                     "device_id": device_id,
-                    "timestamp": datetime.utcnow().isoformat(),
+                    "timestamp": mock_snap.timestamp.isoformat(),
 
                     "cpu_usage": cpu_usage,
                     "memory_usage": memory_usage,
@@ -468,23 +526,23 @@ async def generate_mock_stream(websocket: WebSocket, device_id: str):
                     "fan_speed": fan_speed,
 
                     "power_source": power_source,
-                    "active_process_count": random.randint(90, 140),
+                    "active_process_count": mock_snap.cpu.active_process_count,
 
                     # Extended mock fields
-                    "cpu_frequency_mhz": 2800.0 + random.uniform(-400.0, 400.0),
+                    "cpu_frequency_mhz": mock_snap.cpu.cpu_frequency_mhz,
                     "gpu_usage": mock_gpu_usage,
-                    "gpu_temperature": max(35.0, cpu_temp - 5.0),
-                    "gpu_memory_usage": round(random.uniform(5.0, 20.0), 1),
+                    "gpu_temperature": mock_snap.gpu.gpu_temperature,
+                    "gpu_memory_usage": mock_snap.gpu.gpu_memory_usage,
                     "battery_temperature": mock_bat_temp,
                     "cycle_count": 142,
-                    "read_bytes_sec": random.randint(1000, 500000),
-                    "write_bytes_sec": random.randint(500, 200000),
+                    "read_bytes_sec": mock_snap.disk.read_bytes_sec,
+                    "write_bytes_sec": mock_snap.disk.write_bytes_sec,
                     "signal_strength_dbm": mock_signal_dbm,
                     "ssid": "Dell_Secure_WiFi",
                     "link_speed_mbps": 866,
                     "thermal_state": thermal_state,
-                    "power_draw_watts": round(random.uniform(5.0, 25.0), 1),
-                    "voltage_mv": 11800.0 + random.uniform(-200.0, 200.0),
+                    "power_draw_watts": mock_snap.power.power_draw_watts,
+                    "voltage_mv": mock_snap.power.voltage_mv,
 
                     # Phase 5: Health Score
                     "health_score": hs.score,
@@ -514,6 +572,9 @@ async def generate_mock_stream(websocket: WebSocket, device_id: str):
                         "severity": nl.severity,
                         "generated_in_ms": nl.generated_in_ms,
                     },
+                    
+                    # Phase 17: Virtual Twin State
+                    "twin_state": twin_state,
                 }
             }
 

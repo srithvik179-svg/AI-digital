@@ -77,6 +77,59 @@ export interface TelemetryData {
 
   // Phase 7: NL Summary
   nl_summary?: NLSummary;
+
+  // Phase 17: Virtual Twin State
+  twin_state?: VirtualTwinState;
+}
+
+export interface VirtualTwinState {
+  device_id: string;
+  overall_health: {
+    score: number | null;
+    category: string | null;
+  };
+  components: {
+    cpu: {
+      current_usage: number;
+      active_process_count: number;
+      frequency_mhz?: number | null;
+      rolling_load_average: number;
+    };
+    gpu: {
+      current_usage: number;
+      temperature?: number | null;
+      memory_usage?: number | null;
+    };
+    ram: {
+      current_usage: number;
+    };
+    battery: {
+      level: number;
+      health: number;
+      temperature?: number | null;
+      cycle_count: number;
+      power_source: string;
+      projected_wear_percentage: number;
+      projected_remaining_health_days: number;
+    };
+    disk: {
+      usage: number;
+      read_bytes_sec: number;
+      write_bytes_sec: number;
+      estimated_wear_accumulated_tb: number;
+    };
+    wifi: {
+      signal_strength_dbm?: number | null;
+      ssid?: string | null;
+      link_speed_mbps?: number | null;
+    };
+    thermal: {
+      cpu_temperature: number;
+      fan_speed_rpm: number;
+      thermal_state?: string | null;
+      target_fan_speed_rpm: number;
+    };
+  };
 }
 
 export interface ChatMessage {

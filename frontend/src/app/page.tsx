@@ -11,6 +11,8 @@ import TelemetrySearch from '@/components/dashboard/TelemetrySearch';
 import CorrelationDashboard from '@/components/dashboard/CorrelationDashboard';
 import DependencyGraph from '@/components/dashboard/DependencyGraph';
 import KnowledgeGraphExplorer from '@/components/dashboard/KnowledgeGraphExplorer';
+import ReplayConsole from '@/components/dashboard/ReplayConsole';
+import TimeTravelPlayground from '@/components/dashboard/TimeTravelPlayground';
 import { Terminal, Settings, Play, ShieldAlert, Cpu, CheckCircle2, Upload, AlertCircle, Loader } from 'lucide-react';
 
 const DEVICE_ID = "laptop-mac-001";
@@ -23,6 +25,40 @@ export default function Dashboard() {
   const [tickCount, setTickCount] = useState(0);
   const [isConnected, setIsConnected] = useState(false);
   const [isSimulating, setIsSimulating] = useState(false);
+
+  // Phase 18 & 19: Replay & Time Travel States
+  const [isReplayActive, setIsReplayActive] = useState(false);
+  const isReplayActiveRef = useRef(false);
+  const [projections, setProjections] = useState<any[] | null>(null);
+
+  const handleReplayActiveChange = (isActive: boolean) => {
+    setIsReplayActive(isActive);
+    isReplayActiveRef.current = isActive;
+  };
+
+  const handleReplayFrameChange = (frame: TelemetryData | null) => {
+    if (frame) {
+      setLatestData(frame);
+      if (frame.active_alerts) {
+        setActiveAlerts(frame.active_alerts);
+      }
+      if (frame.nl_summary) {
+        setNlSummary(frame.nl_summary);
+      }
+    } else {
+      // Replay stopped, reset to live latest tick
+      if (telemetryHistory.length > 0) {
+        const liveLatest = telemetryHistory[0];
+        setLatestData(liveLatest);
+        if (liveLatest.active_alerts) {
+          setActiveAlerts(liveLatest.active_alerts);
+        }
+        if (liveLatest.nl_summary) {
+          setNlSummary(liveLatest.nl_summary);
+        }
+      }
+    }
+  };
   const [uploadStatus, setUploadStatus] = useState<{
     status: 'idle' | 'uploading' | 'success' | 'error';
     importedCount?: number;
@@ -111,14 +147,18 @@ export default function Dashboard() {
             const payload = JSON.parse(event.data);
               if (payload.type === 'telemetry_update') {
                 const data = payload.data as TelemetryData;
-                setLatestData(data);
                 setTelemetryHistory(prev => [data, ...prev].slice(0, 60));
                 setTickCount(c => c + 1);
-                if (data.active_alerts) {
-                  setActiveAlerts(data.active_alerts);
-                }
-                if (data.nl_summary) {
-                  setNlSummary(data.nl_summary);
+                
+                // Only update dials and summary if replay is not active!
+                if (!isReplayActiveRef.current) {
+                  setLatestData(data);
+                  if (data.active_alerts) {
+                    setActiveAlerts(data.active_alerts);
+                  }
+                  if (data.nl_summary) {
+                    setNlSummary(data.nl_summary);
+                  }
                 }
               }
           } catch (err) {
@@ -322,7 +362,21 @@ export default function Dashboard() {
         <TwinStatus latestData={latestData} isConnected={isConnected} />
 
         {/* ── 5-Panel Telemetry Charts — Full Width ── */}
-        <TelemetryCharts data={telemetryHistory} />
+        <TelemetryCharts data={telemetryHistory} projections={projections} />
+
+        {/* Phase 18 & 19: Historical Replay & Time Travel Scenario Planner */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <ReplayConsole
+            deviceId={DEVICE_ID}
+            onFrameChange={handleReplayFrameChange}
+            onReplayActiveChange={handleReplayActiveChange}
+          />
+          <TimeTravelPlayground
+            deviceId={DEVICE_ID}
+            selectedTimestamp={latestData?.timestamp || null}
+            onProjectionLoaded={setProjections}
+          />
+        </div>
 
         {/* Phase 13 & 14: Analytics Grid (Correlation Heatmap & Dependency Topology) */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

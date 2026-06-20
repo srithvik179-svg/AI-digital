@@ -5,6 +5,17 @@ All notable changes to the Laptop Telemetry Digital Twin project are documented 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.0] - 2026-06-20
+
+### Added
+- **Dynamic Step-by-Step Simulation**: Integrated mathematical equations for thermodynamic dissipation, active fan speed ramping, clock throttling, battery CC/CV charging, cycle count increments, and disk writes in `VirtualLaptop`.
+- **WebSocket State Updates**: Propagated live twin states (`twin_state`) in real-time JSON packets during mock streams and real daemon ingest ticks.
+- **Historical Playback API**: Added `/replay` route retrieving chronological snapshots and tracking wear increments sequentially.
+- **What-If Branch Projections API**: Added `/what-if` scenario planner running multi-step projections starting from specific historical timestamps.
+- **ReplayConsole HUD Component**: Built a media playback card (`ReplayConsole.tsx`) with play/pause/stop, seek progress bar, speed rates, and history limits.
+- **Time Travel Scenario Planner Component**: Built scenario configuration card (`TimeTravelPlayground.tsx`) overlaying future dashed paths on CPU temp, battery, and CPU load panels.
+- **Unit Tests**: Added 4 unit tests in `test_twin_simulation_replay.py` validating thermodynamic calculations, battery cycles, replay streams, and what-if timesteps.
+
 ## [1.8.0] - 2026-06-20
 
 ### Added
