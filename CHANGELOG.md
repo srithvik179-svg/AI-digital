@@ -5,6 +5,13 @@ All notable changes to the Laptop Telemetry Digital Twin project are documented 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.0] - 2026-06-20
+
+### Added
+- **Dependency Graph UI (`DependencyGraph.tsx`)**: Created interactive directed topology visualization in SVG with animated flow pathways mapping hardware telemetry interactions.
+- **Dynamic Causal Inspector**: Integrated node/edge selections highlighting focused paths and updating a detailed sidebar inspect panel with causal explanations.
+- **Analytics Layout Grid**: Redesigned page.tsx to place the correlation matrix heatmap and hardware dependency graph side-by-side.
+
 ## [1.6.0] - 2026-06-20
 
 ### Added

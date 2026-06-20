@@ -5,7 +5,7 @@ Track the active design phases, completed milestones, and tech stack details of 
 ---
 
 ## Active Phase
-- **Current Phase**: `Phase 13 - Statistical Correlation Analysis`
+- **Current Phase**: `Phase 14 - Dependency Graph Engine`
 - **Status**: Completed :white_check_mark:
 
 ---
@@ -27,6 +27,7 @@ Track the active design phases, completed milestones, and tech stack details of 
 | **Phase 11** | **Digital Twin Core Model** | Completed :white_check_mark: | Represented CPU, GPU, RAM, Battery, Disk, WiFi, and Thermal using object-oriented design and thermodynamic simulation equations. |
 | **Phase 12** | **Telemetry Relationship Mapper** | Completed :white_check_mark: | Developed a dynamic Pearson correlation analyzer to identify system dependencies, storing them in PostgreSQL. |
 | **Phase 13** | **Statistical Correlation Analysis** | Completed :white_check_mark: | Implemented Spearman rank correlation with tie-breaking, exposed an 8x8 matrix API, and created a responsive heatmap dashboard component. |
+| **Phase 14** | **Dependency Graph Engine** | Completed :white_check_mark: | Designed and integrated an interactive directed SVG graph on the frontend showing hardware telemetry causal connections and animated flow states. |
 
 ---
 
