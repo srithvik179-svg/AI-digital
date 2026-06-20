@@ -103,7 +103,7 @@ export default function Dashboard() {
             if (payload.type === 'telemetry_update') {
               const data = payload.data as TelemetryData;
               setLatestData(data);
-              setTelemetryHistory(prev => [data, ...prev].slice(0, 30));
+              setTelemetryHistory(prev => [data, ...prev].slice(0, 60));
             }
           } catch (err) {
             console.error("Failed to parse WebSocket message:", err);
@@ -302,21 +302,16 @@ export default function Dashboard() {
         {/* Dashboard HUD Cards */}
         <TwinStatus latestData={latestData} isConnected={isConnected} />
 
-        {/* Charts & AI Agent Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Charts Panel */}
-          <div className="lg:col-span-2">
-            <TelemetryCharts data={telemetryHistory} />
-          </div>
+        {/* ── 5-Panel Telemetry Charts — Full Width ── */}
+        <TelemetryCharts data={telemetryHistory} />
 
+        {/* ── Bottom Row: AI Chat + Raw Logs ── */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* AI Twin chat interface */}
-          <div className="lg:col-span-1">
-            <ChatInterface deviceId={DEVICE_ID} />
-          </div>
-        </div>
+          <ChatInterface deviceId={DEVICE_ID} />
 
-        {/* Historical Logs Console */}
-        <div className="glass-panel rounded-2xl border border-white/5 overflow-hidden">
+          {/* Historical Logs Console */}
+          <div className="glass-panel rounded-2xl border border-white/5 overflow-hidden">
           <div className="px-5 py-4 border-b border-white/5 bg-slate-900/40 flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <Terminal className="h-4.5 w-4.5 text-indigo-400" />
@@ -340,6 +335,8 @@ export default function Dashboard() {
             )}
           </div>
         </div>
+
+        </div>{/* end bottom row */}
 
       </div>
 

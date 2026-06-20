@@ -1,17 +1,42 @@
 export interface TelemetryData {
-  id: number;
+  id: string;
   device_id: string;
   timestamp: string;
+
+  // Core performance
   cpu_usage: number;
   memory_usage: number;
   disk_usage: number;
+  active_process_count: number;
+  cpu_frequency_mhz?: number;
+
+  // Thermals
   cpu_temperature: number;
+  fan_speed: number;
+  thermal_state?: 'nominal' | 'moderate' | 'critical' | 'serious' | string;
+
+  // GPU
+  gpu_usage?: number;
+  gpu_temperature?: number;
+  gpu_memory_usage?: number;
+
+  // Battery
   battery_level: number;
   battery_health: number;
-  fan_speed: number;
+  battery_temperature?: number;
+  cycle_count?: number;
   power_source: 'battery' | 'ac';
-  active_process_count: number;
-  metadata_info?: Record<string, any>;
+  power_draw_watts?: number;
+  voltage_mv?: number;
+
+  // Disk I/O
+  read_bytes_sec?: number;
+  write_bytes_sec?: number;
+
+  // WiFi
+  signal_strength_dbm?: number;
+  ssid?: string;
+  link_speed_mbps?: number;
 }
 
 export interface ChatMessage {
