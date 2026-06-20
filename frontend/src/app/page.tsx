@@ -5,7 +5,7 @@ import { TelemetryData } from '@/types';
 import TwinStatus from '@/components/dashboard/TwinStatus';
 import TelemetryCharts from '@/components/dashboard/TelemetryCharts';
 import ChatInterface from '@/components/dashboard/ChatInterface';
-import { Terminal, Settings, Play, ShieldAlert, Cpu, CheckCircle2 } from 'lucide-react';
+import { Terminal, Settings, Play, ShieldAlert, Cpu, CheckCircle2, Upload, AlertCircle, Loader } from 'lucide-react';
 
 const DEVICE_ID = "laptop-mac-001";
 
@@ -14,8 +14,63 @@ export default function Dashboard() {
   const [latestData, setLatestData] = useState<TelemetryData | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [isSimulating, setIsSimulating] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState<{
+    status: 'idle' | 'uploading' | 'success' | 'error';
+    importedCount?: number;
+    skippedCount?: number;
+    message?: string;
+  }>({ status: 'idle' });
   
   const wsRef = useRef<WebSocket | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setUploadStatus({ status: 'uploading' });
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'}/telemetry/upload`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Upload failed');
+      }
+
+      const result = await response.json();
+      setUploadStatus({
+        status: 'success',
+        importedCount: result.imported_count,
+        skippedCount: result.skipped_count,
+        message: `Successfully imported ${result.imported_count} records! Skipped ${result.skipped_count} rows.`
+      });
+
+      if (fileInputRef.current) fileInputRef.current.value = '';
+
+      // Immediately fetch latest logs to populate chart
+      const fetchResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'}/telemetry/?device_id=${DEVICE_ID}&limit=30`);
+      if (fetchResponse.ok) {
+        const data = await fetchResponse.json();
+        if (data.length > 0) {
+          setLatestData(data[0]);
+          setTelemetryHistory(data);
+        }
+      }
+    } catch (e: any) {
+      setUploadStatus({
+        status: 'error',
+        message: e.message || 'CSV Import failed. Check headers and column types.'
+      });
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
 
   // Setup WebSocket connection
   useEffect(() => {
@@ -126,28 +181,93 @@ export default function Dashboard() {
             </p>
           </div>
           
-          <button
-            onClick={handleStartSimulation}
-            disabled={!isConnected || isSimulating}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition duration-200 shadow-md ${
-              isSimulating
-                ? 'bg-indigo-950 text-indigo-400 border border-indigo-500/20 cursor-default'
-                : 'bg-indigo-600 hover:bg-indigo-500 text-white cursor-pointer disabled:opacity-50'
-            }`}
-          >
-            {isSimulating ? (
-              <>
-                <CheckCircle2 className="h-4 w-4" />
-                Telemetry Streaming Live
-              </>
-            ) : (
-              <>
-                <Play className="h-4 w-4 fill-current" />
-                Start Live Simulation Stream
-              </>
-            )}
-          </button>
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto self-stretch md:self-auto">
+            {/* Hidden File Input */}
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileUpload}
+              accept=".csv"
+              className="hidden"
+            />
+            
+            {/* CSV Import Button */}
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploadStatus.status === 'uploading'}
+              className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-slate-900 border border-white/5 text-slate-200 hover:text-white hover:bg-slate-800 transition duration-200 shadow-md disabled:opacity-50"
+            >
+              {uploadStatus.status === 'uploading' ? (
+                <>
+                  <Loader className="h-4.5 w-4.5 animate-spin text-indigo-400" />
+                  Uploading CSV...
+                </>
+              ) : (
+                <>
+                  <Upload className="h-4.5 w-4.5 text-indigo-400" />
+                  Upload Telemetry CSV
+                </>
+              )}
+            </button>
+
+            {/* Simulation Button */}
+            <button
+              onClick={handleStartSimulation}
+              disabled={!isConnected || isSimulating}
+              className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition duration-200 shadow-md ${
+                isSimulating
+                  ? 'bg-indigo-950 text-indigo-400 border border-indigo-500/20 cursor-default'
+                  : 'bg-indigo-600 hover:bg-indigo-500 text-white cursor-pointer disabled:opacity-50'
+              }`}
+            >
+              {isSimulating ? (
+                <>
+                  <CheckCircle2 className="h-4 w-4" />
+                  Telemetry Streaming Live
+                </>
+              ) : (
+                <>
+                  <Play className="h-4 w-4 fill-current" />
+                  Start Live Simulation Stream
+                </>
+              )}
+            </button>
+          </div>
         </div>
+
+        {/* Upload Status Notification Banner */}
+        {uploadStatus.status !== 'idle' && (
+          <div className={`p-4 rounded-xl text-xs flex items-center justify-between border ${
+            uploadStatus.status === 'success'
+              ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+              : uploadStatus.status === 'error'
+              ? 'bg-red-500/10 border-red-500/20 text-red-400'
+              : 'bg-indigo-500/10 border-indigo-500/20 text-indigo-400'
+          }`}>
+            <div className="flex items-center gap-2">
+              {uploadStatus.status === 'success' ? (
+                <CheckCircle2 className="h-4 w-4 shrink-0" />
+              ) : uploadStatus.status === 'error' ? (
+                <ShieldAlert className="h-4 w-4 shrink-0" />
+              ) : (
+                <Loader className="h-4 w-4 animate-spin shrink-0" />
+              )}
+              <span>
+                {uploadStatus.status === 'uploading' 
+                  ? 'Importing CSV file to database...' 
+                  : uploadStatus.message}
+              </span>
+            </div>
+            {uploadStatus.status !== 'uploading' && (
+              <button 
+                onClick={() => setUploadStatus({ status: 'idle' })} 
+                className="text-[10px] uppercase font-bold hover:underline opacity-80"
+              >
+                Dismiss
+              </button>
+            )}
+          </div>
+        )}
 
         {/* Dashboard HUD Cards */}
         <TwinStatus latestData={latestData} isConnected={isConnected} />
