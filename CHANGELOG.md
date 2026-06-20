@@ -5,6 +5,15 @@ All notable changes to the Laptop Telemetry Digital Twin project are documented 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.0] - 2026-06-20
+
+### Added
+- **Neo4j Graph Database**: Provisioned a Neo4j community database container in Docker Compose with health checks and data volumes.
+- **Knowledge Graph Sync Service (`services/knowledge_graph.py`)**: Developed Postgres-to-Neo4j data synchronizer writing telemetry node properties and directed `INFLUENCES` relationships.
+- **Neo4j API Router (`knowledge_graph.py`)**: Added query and sync endpoints, restricting query execution to read-only Cypher transactions.
+- **Cypher Explorer Terminal (`KnowledgeGraphExplorer.tsx`)**: Created interactive playground on frontend that executes Cypher queries, renders nodes in an SVG circle layout, and reveals raw JSON results.
+- **Knowledge Graph Tests**: Added 4 unit tests in `test_knowledge_graph.py` verifying driver mocking, sync logic, Cypher result formatting, and read-only validation.
+
 ## [1.7.0] - 2026-06-20
 
 ### Added

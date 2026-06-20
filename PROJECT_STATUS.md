@@ -5,7 +5,7 @@ Track the active design phases, completed milestones, and tech stack details of 
 ---
 
 ## Active Phase
-- **Current Phase**: `Phase 14 - Dependency Graph Engine`
+- **Current Phase**: `Phase 15 - Build Knowledge Graph`
 - **Status**: Completed :white_check_mark:
 
 ---
@@ -28,12 +28,13 @@ Track the active design phases, completed milestones, and tech stack details of 
 | **Phase 12** | **Telemetry Relationship Mapper** | Completed :white_check_mark: | Developed a dynamic Pearson correlation analyzer to identify system dependencies, storing them in PostgreSQL. |
 | **Phase 13** | **Statistical Correlation Analysis** | Completed :white_check_mark: | Implemented Spearman rank correlation with tie-breaking, exposed an 8x8 matrix API, and created a responsive heatmap dashboard component. |
 | **Phase 14** | **Dependency Graph Engine** | Completed :white_check_mark: | Designed and integrated an interactive directed SVG graph on the frontend showing hardware telemetry causal connections and animated flow states. |
+| **Phase 15** | **Build Knowledge Graph** | Completed :white_check_mark: | Provisioned a Neo4j container and wrote sync and Cypher terminal routes, allowing custom queries and SVG circle layouts on the dashboard. |
 
 ---
 
 ## Tech Stack Overview
 
-1. **Backend**: FastAPI, SQLAlchemy (PostgreSQL ORM), Redis, ChromaDB, Uvicorn, pytest.
+1. **Backend**: FastAPI, SQLAlchemy (PostgreSQL ORM), Redis, ChromaDB, Neo4j Graph DB Client, Uvicorn, pytest.
 2. **Frontend**: Next.js (React 18), TailwindCSS, Recharts, Lucide React, TypeScript.
-3. **Database**: PostgreSQL 15, Redis Cache, ChromaDB vector collection.
+3. **Database**: PostgreSQL 15, Redis Cache, ChromaDB vector collection, Neo4j 5.12.0 Graph DB.
 4. **Daemon**: Local macOS python daemon pushing system metrics to backend via REST API.
