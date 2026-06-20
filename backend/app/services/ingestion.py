@@ -16,7 +16,9 @@ from app.models.telemetry import (
     ThermalMetrics,
     PowerMetrics
 )
+from app.models.alert import TelemetryAlert
 from app.services.health_score import compute_health_score
+from app.services.alert_engine import evaluate_alerts
 
 # Header mappings (Standard Key -> List of case-insensitive aliases)
 HEADER_ALIASES: Dict[str, List[str]] = {
@@ -356,5 +358,43 @@ def bulk_insert_normalized_telemetry(db: Session, batch: List[Dict[str, Any]]) -
     db.bulk_insert_mappings(WiFiMetrics, wifi_mappings)
     db.bulk_insert_mappings(ThermalMetrics, thermal_mappings)
     db.bulk_insert_mappings(PowerMetrics, power_mappings)
-    
+
+    # Phase 6: evaluate and persist alerts for each snapshot
+    alert_mappings = []
+    for snap, row in zip(snapshot_mappings, batch):
+        fired = evaluate_alerts(
+            cpu_temperature=row["cpu_temperature"],
+            battery_level=row["battery_level"],
+            battery_health=row["battery_health"],
+            disk_usage=row["disk_usage"],
+            gpu_temperature=get_val(row, "gpu_temperature", None),
+            battery_temperature=get_val(row, "battery_temperature", None),
+            cycle_count=get_val(row, "cycle_count", None),
+            write_bytes_sec=get_val(row, "write_bytes_sec", None),
+            signal_strength_dbm=get_val(row, "signal_strength_dbm", None),
+            link_speed_mbps=get_val(row, "link_speed_mbps", None),
+            thermal_state=get_val(row, "thermal_state", None),
+            power_source=row.get("power_source", "ac"),
+            device_id=row["device_id"],
+            snapshot_id=snap["id"],
+        )
+        for a in fired:
+            alert_mappings.append({
+                "id": a.id,
+                "device_id": a.device_id,
+                "snapshot_id": snap["id"],
+                "category": a.category,
+                "severity": a.severity,
+                "rule_id": a.rule_id,
+                "message": a.message,
+                "metric_name": a.metric_name,
+                "metric_value": a.metric_value,
+                "threshold_value": a.threshold_value,
+                "triggered_at": a.triggered_at,
+                "acknowledged": False,
+                "acknowledged_at": None,
+            })
+    if alert_mappings:
+        db.bulk_insert_mappings(TelemetryAlert, alert_mappings)
+
     return snapshot_ids

@@ -1,10 +1,11 @@
 'use client';
 
 import React, { useEffect, useState, useRef } from 'react';
-import { TelemetryData } from '@/types';
+import { TelemetryData, ActiveAlert } from '@/types';
 import TwinStatus from '@/components/dashboard/TwinStatus';
 import TelemetryCharts from '@/components/dashboard/TelemetryCharts';
 import ChatInterface from '@/components/dashboard/ChatInterface';
+import AlertsPanel from '@/components/dashboard/AlertsPanel';
 import { Terminal, Settings, Play, ShieldAlert, Cpu, CheckCircle2, Upload, AlertCircle, Loader } from 'lucide-react';
 
 const DEVICE_ID = "laptop-mac-001";
@@ -12,6 +13,7 @@ const DEVICE_ID = "laptop-mac-001";
 export default function Dashboard() {
   const [telemetryHistory, setTelemetryHistory] = useState<TelemetryData[]>([]);
   const [latestData, setLatestData] = useState<TelemetryData | null>(null);
+  const [activeAlerts, setActiveAlerts] = useState<ActiveAlert[]>([]);
   const [isConnected, setIsConnected] = useState(false);
   const [isSimulating, setIsSimulating] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<{
@@ -100,11 +102,15 @@ export default function Dashboard() {
           if (isUnmounted) return;
           try {
             const payload = JSON.parse(event.data);
-            if (payload.type === 'telemetry_update') {
-              const data = payload.data as TelemetryData;
-              setLatestData(data);
-              setTelemetryHistory(prev => [data, ...prev].slice(0, 60));
-            }
+              if (payload.type === 'telemetry_update') {
+                const data = payload.data as TelemetryData;
+                setLatestData(data);
+                setTelemetryHistory(prev => [data, ...prev].slice(0, 60));
+                // Update live alerts from stream
+                if (data.active_alerts) {
+                  setActiveAlerts(data.active_alerts);
+                }
+              }
           } catch (err) {
             console.error("Failed to parse WebSocket message:", err);
           }
@@ -305,8 +311,12 @@ export default function Dashboard() {
         {/* ── 5-Panel Telemetry Charts — Full Width ── */}
         <TelemetryCharts data={telemetryHistory} />
 
-        {/* ── Bottom Row: AI Chat + Raw Logs ── */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* ── Bottom Row: Alerts | AI Chat | Raw Logs ── */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+          {/* Phase 6: Alert Detection Panel */}
+          <AlertsPanel alerts={activeAlerts} deviceId={DEVICE_ID} />
+
           {/* AI Twin chat interface */}
           <ChatInterface deviceId={DEVICE_ID} />
 

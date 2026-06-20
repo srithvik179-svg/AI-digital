@@ -11,6 +11,7 @@ import uuid
 from app.core.database import get_db
 from app.core.logging import logger
 from app.services.health_score import compute_health_score
+from app.services.alert_engine import evaluate_alerts
 from app.models.telemetry import (
     TelemetrySnapshot,
     CPUMetrics,
@@ -384,6 +385,24 @@ async def generate_mock_stream(websocket: WebSocket, device_id: str):
                 thermal_state=thermal_state,
             )
 
+            # Phase 6: Evaluate alerts for this mock tick
+            mock_bat_temp = round(random.uniform(28.0, 35.0), 1)
+            active_alerts = evaluate_alerts(
+                cpu_temperature=cpu_temp,
+                battery_level=round(battery_level, 1),
+                battery_health=94.0,
+                disk_usage=disk_usage,
+                gpu_temperature=max(35.0, cpu_temp - 5.0),
+                battery_temperature=mock_bat_temp,
+                cycle_count=142,
+                write_bytes_sec=random.randint(500, 200000),
+                signal_strength_dbm=float(mock_signal_dbm),
+                link_speed_mbps=866,
+                thermal_state=thermal_state,
+                power_source=power_source,
+                device_id=device_id,
+            )
+
             # Form standard telemetry dict matching TelemetryResponse
             mock_data = {
                 "type": "telemetry_update",
@@ -409,7 +428,7 @@ async def generate_mock_stream(websocket: WebSocket, device_id: str):
                     "gpu_usage": mock_gpu_usage,
                     "gpu_temperature": max(35.0, cpu_temp - 5.0),
                     "gpu_memory_usage": round(random.uniform(5.0, 20.0), 1),
-                    "battery_temperature": round(random.uniform(28.0, 35.0), 1),
+                    "battery_temperature": mock_bat_temp,
                     "cycle_count": 142,
                     "read_bytes_sec": random.randint(1000, 500000),
                     "write_bytes_sec": random.randint(500, 200000),
@@ -425,6 +444,20 @@ async def generate_mock_stream(websocket: WebSocket, device_id: str):
                     "health_category": hs.category,
                     "health_breakdown": hs.breakdown,
                     "health_recommendations": hs.recommendations,
+
+                    # Phase 6: Active Alerts
+                    "active_alerts": [
+                        {
+                            "rule_id": a.rule_id,
+                            "category": a.category,
+                            "severity": a.severity,
+                            "message": a.message,
+                            "metric_name": a.metric_name,
+                            "metric_value": a.metric_value,
+                        }
+                        for a in active_alerts
+                    ],
+                    "alert_count": len(active_alerts),
                 }
             }
 

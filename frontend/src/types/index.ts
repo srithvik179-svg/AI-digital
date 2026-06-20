@@ -1,3 +1,13 @@
+// Phase 6: Alert Detection Engine types
+export interface ActiveAlert {
+  rule_id: string;
+  category: 'Overheating' | 'Battery' | 'Disk' | 'Network' | string;
+  severity: 'Info' | 'Warning' | 'Critical' | string;
+  message: string;
+  metric_name: string;
+  metric_value: number;
+}
+
 export interface TelemetryData {
   id: string;
   device_id: string;
@@ -51,6 +61,10 @@ export interface TelemetryData {
     wifi: number;
   };
   health_recommendations?: string[];
+
+  // Phase 6: Alert Detection Engine
+  active_alerts?: ActiveAlert[];
+  alert_count?: number;
 }
 
 export interface ChatMessage {
