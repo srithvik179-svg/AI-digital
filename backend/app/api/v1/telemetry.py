@@ -45,7 +45,7 @@ class ConnectionManager:
 manager = ConnectionManager()
 
 @router.post("/", response_model=TelemetryResponse)
-def create_telemetry(record: TelemetryCreate, db: Session = Depends(get_db)):
+async def create_telemetry(record: TelemetryCreate, db: Session = Depends(get_db)):
     """
     Ingest a new laptop telemetry record.
     Saves to PostgreSQL database, indexes in ChromaDB, and broadcasts to active websocket dashboard clients.
@@ -77,10 +77,10 @@ def create_telemetry(record: TelemetryCreate, db: Session = Depends(get_db)):
         # Convert datetime to string for JSON serialization
         response_data["timestamp"] = response_data["timestamp"].isoformat()
         
-        asyncio.create_task(manager.broadcast(json.dumps({
+        await manager.broadcast(json.dumps({
             "type": "telemetry_update",
             "data": response_data
-        })))
+        }))
         
         return db_record
     except Exception as e:
