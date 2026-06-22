@@ -4,21 +4,32 @@ import { Send, Bot, User, CornerDownLeft, Sparkles, RefreshCw } from 'lucide-rea
 
 interface ChatInterfaceProps {
   deviceId: string;
+  mode?: 'historical' | 'live';
 }
 
-const SUGGESTIONS = [
-  "How is my battery health?",
-  "Why is my laptop running hot?",
-  "Check CPU and RAM usage bottlenecks",
-  "Summarize my laptop twin state"
+const SUGGESTIONS_LIVE = [
+  "What is CPU usage right now?",
+  "How will battery condition be after 30 days?",
+  "What happens if CPU reaches 95%?",
+  "Check current laptop health score"
 ];
 
-export const ChatInterface: React.FC<ChatInterfaceProps> = ({ deviceId }) => {
+const SUGGESTIONS_HISTORICAL = [
+  "Why did overheating occur in history?",
+  "What caused the critical battery drain state?",
+  "what is the laptop health score trend?",
+  "Explain correlation between CPU temp and fan speed"
+];
+
+export const ChatInterface: React.FC<ChatInterfaceProps> = ({ deviceId, mode = 'live' }) => {
+  const suggestions = mode === 'historical' ? SUGGESTIONS_HISTORICAL : SUGGESTIONS_LIVE;
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: 'welcome',
       sender: 'twin',
-      text: "Hello! I am your AI Laptop Twin. Ask me anything about your device telemetry, thermals, processes, or battery state.",
+      text: mode === 'historical'
+        ? "Hello! I am your Historical Analysis AI Consultant. Ask me anything about the uploaded datasets, historical trends, correlations, or root causes."
+        : "Hello! I am your Live AI Laptop Twin. Ask me anything about your current device telemetry, live predictions, or steady-state simulations.",
       timestamp: new Date()
     }
   ]);
@@ -57,7 +68,8 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ deviceId }) => {
         },
         body: JSON.stringify({
           device_id: deviceId,
-          query: textToSend
+          query: textToSend,
+          mode: mode
         })
       });
 
@@ -103,15 +115,21 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ deviceId }) => {
           </div>
           <div>
             <h2 className="text-sm font-bold text-white flex items-center gap-1.5">
-              Digital Twin AI Consultant
+              {mode === 'historical' ? 'Historical Analysis AI Consultant' : 'Digital Twin AI Consultant'}
               <Sparkles className="h-3.5 w-3.5 text-amber-400 fill-amber-400/20" />
             </h2>
-            <p className="text-slate-400 text-xs">RAG Agent connected to telemetry store</p>
+            <p className="text-slate-400 text-xs">
+              {mode === 'historical' ? 'RAG Agent connected to historical dataset' : 'RAG Agent connected to telemetry stream'}
+            </p>
           </div>
         </div>
-        <div className="flex items-center space-x-1.5 bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded-full text-[10px] font-semibold border border-emerald-500/20">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 pulse-dot-green inline-block" />
-          <span>Twin Online</span>
+        <div className={`flex items-center space-x-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
+          mode === 'historical' 
+            ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' 
+            : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+        }`}>
+          <span className={`w-1.5 h-1.5 rounded-full ${mode === 'historical' ? 'bg-amber-400 pulse-dot-amber' : 'bg-emerald-400 pulse-dot-green'} inline-block`} />
+          <span>{mode === 'historical' ? 'Historical Mode' : 'Twin Online'}</span>
         </div>
       </div>
 
@@ -160,7 +178,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ deviceId }) => {
       {/* Suggested prompts */}
       {messages.length === 1 && (
         <div className="px-5 py-2.5 border-t border-white/5 bg-slate-950/40 flex flex-wrap gap-2">
-          {SUGGESTIONS.map((suggestion, i) => (
+          {suggestions.map((suggestion, i) => (
             <button
               key={i}
               onClick={() => sendMessage(suggestion)}

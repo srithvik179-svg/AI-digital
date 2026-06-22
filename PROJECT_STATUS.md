@@ -5,7 +5,7 @@ Track the active design phases, completed milestones, and tech stack details of 
 ---
 
 ## Active Phase
-- **Current Phase**: `Phase 31: RAG Architecture`
+- **Current Phase**: `Phase 51: Historical & Live Twin Architecture Split`
 - **Status**: Completed :white_check_mark:
 
 ---
@@ -38,6 +38,8 @@ Track the active design phases, completed milestones, and tech stack details of 
 | **Phase 22** | **Root Cause Analysis Engine** | Completed :white_check_mark: | Implemented Heuristic Decision Trees and correlation graph weight traversal to automatically rank and trace root causes of active alerts. |
 | **Phases 23–30** | **AI Reasoning Layer** | Completed :white_check_mark: | Added system stress indexes, XGBoost/Gradient Boosting recursive temperature forecasting, Isolation Forest anomalies, Weibull RUL, and glassmorphic stats cards. |
 | **Phase 31** | **RAG Architecture** | Completed :white_check_mark: | ChromaDB vector store indexing, strict grounded prompt templates for ChatOpenAI (GPT-4), and Grounded Cognitive Solver fallback offline modes. |
+| **Phase 50** | **Evidence-Driven Chatbot** | Completed :white_check_mark: | 10-step chatbot pipeline with deterministic checks, predictions, simulations, and post-generation Hallucination Guard verification. |
+| **Phase 51** | **Historical & Live Twin Monolithic Split** | Completed :white_check_mark: | Restructured application into separate Historical dataset intelligence and Live Twin simulation/forecast modules with isolated landing navigation page. |
 
 ---
 

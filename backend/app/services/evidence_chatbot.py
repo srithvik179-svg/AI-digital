@@ -115,7 +115,8 @@ def run_rule_engine(snap: TelemetrySnapshot) -> List[str]:
 def query_evidence_chatbot(
     device_id: str,
     query: str,
-    db_session: Session
+    db_session: Session,
+    mode: str = "live"
 ) -> Dict[str, Any]:
     """
     Main chatbot orchestrator implementing the 10-step pipeline.
@@ -125,6 +126,22 @@ def query_evidence_chatbot(
 
     # Step 1: Question Classification
     category = classify_question(query)
+    
+    # Data Isolation Guard per Mode
+    if mode == "historical":
+        if category in ("Prediction", "Simulation", "Current Status"):
+            return {
+                "query": query,
+                "response": "Answer:\nInsufficient telemetry data available to answer this question.\n\nEvidence:\nNone\n\nReasoning:\nPredictions, simulations, and live status are only available in the Live AI Digital Twin module.\n\nConfidence:\n0%",
+                "source_documents": []
+            }
+    elif mode == "live":
+        if category in ("Trend Analysis", "Correlation Analysis", "Root Cause Analysis"):
+            return {
+                "query": query,
+                "response": "Answer:\nInsufficient telemetry data available to answer this question.\n\nEvidence:\nNone\n\nReasoning:\nHistorical trends, correlations, and root cause analysis are only available in the Historical Telemetry Intelligence module.\n\nConfidence:\n0%",
+                "source_documents": []
+            }
     
     # Step 2: Retrieval Layer
     # Fetch latest snapshot

@@ -29,6 +29,25 @@ graph TD
 
 ---
 
+## Product Modules & Workspaces
+
+The platform is structured into two main workspaces, selected from a landing page:
+
+### 1. Historical Telemetry Intelligence
+*   **Purpose**: Deep-dive analytics of uploaded datasets and past system logs to resolve "What happened?" and "Why did it happen?".
+*   **Features**: CSV uploads, Recharts trend lines, Pearson/Spearman correlation heatmaps, dynamic influence graphs, heuristic decision tree root-cause analysis, and Neo4j knowledge graph exploration.
+*   **Historical Chatbot**: A data-isolated chatbot that only answers queries grounded in historical logs/databases, refusing predictions or simulation queries.
+
+### 2. Live AI Digital Twin
+*   **Purpose**: Real-time laptop monitoring, forecast horizons, and physics-based what-if simulations to answer "What is happening now?", "What will happen?", and "What could happen?".
+*   **Tabbed Interface**:
+    *   **Current State**: Live parameters dashboard, 3D laptop thermal/battery mapping (Three.js), and fleet view cards.
+    *   **Prediction**: LSTM battery discharge curves, Prophet signal degradation timelines, and XGBoost CPU/GPU temperature predictions.
+    *   **What-If Simulation**: Steady-state power/thermal calculations with sliders and branch overlays.
+*   **Live Chatbot**: A data-isolated chatbot answering strictly from live telemetry, current health score, forecasts, and simulations, refusing historical database queries.
+
+---
+
 ## Tech Stack
 - **Frontend Presentation**: [Next.js 14](https://nextjs.org/) (App Router, TypeScript, Tailwind CSS, Recharts)
 - **API Engine**: [FastAPI](https://fastapi.tiangolo.com/) (Async ASGI, WebSockets, Structured Logging, API v1 Versioning)

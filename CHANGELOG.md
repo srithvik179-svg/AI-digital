@@ -5,6 +5,26 @@ All notable changes to the Laptop Telemetry Digital Twin project are documented 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.13.0] - 2026-06-22
+
+### Added
+- **Monolithic Architecture Split**: Restructured the TwinIntel portal into two isolated modules:
+  - **Historical Telemetry Intelligence**: For examining uploaded CSV datasets, PostgreSQL history logs, statistical correlation matrix heatmaps, dependency topology flowcharts, custom rules engines, and Neo4j graph nodes.
+  - **Live AI Digital Twin**: For real-time monitoring via 3D Three.js thermal models, WMI/psutil stream pipelines, and multi-device fleet views.
+- **Isolated Navigation**: Built a glassmorphic Landing Page portal allowing users to explicitly select their active workspace.
+- **Tabbed Live Twin Workspace**: Structured live telemetry into three operational tabs:
+  - **Current State**: Displays live metrics (CPU, GPU, RAM, Temp, Fan, Battery, WiFi, Health Score), 3D laptop models, live charts, and fleet dashboards.
+  - **Prediction**: Displays 7 & 30-day degradation forecasts (LSTM, XGBoost, Prophet future models).
+  - **What-If Simulation**: Mounts steady-state simulation sliders and time-travel scenario projections.
+- **Data Isolated Chatbots**: Added mode parameter routing (`historical` vs `live`) to query endpoints. The chatbots do not share context, and enforce strict queries limits (historical chatbot blocks predictions/simulations/live states; live chatbot blocks historical trends/correlations/root causes).
+
+## [1.12.0] - 2026-06-22
+
+### Added
+- **Evidence-Driven Chatbot (Phase 50)**: Architected a strict 10-step chatbot pipeline compiling classification, Postgres retrievals, deterministic rules, root-cause heuristics, predictive models, and steady-state simulation math.
+- **Post-Generation Hallucination Guard**: Cross-verifies output answer claims against structured evidence logs, blocking ungrounded numerical claims and filtering banned terms (dust, thermal paste, hardware defects).
+- **Test Automation**: Added 22 unit and integration tests in `test_evidence_chatbot.py` and `test_hallucination_guard.py`, reaching 387 total backend tests.
+
 ## [1.11.0] - 2026-06-20
 
 ### Added

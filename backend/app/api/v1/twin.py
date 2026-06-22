@@ -21,7 +21,8 @@ def query_twin_agent(
         result = query_evidence_chatbot(
             device_id=payload.device_id,
             query=payload.query,
-            db_session=db
+            db_session=db,
+            mode=payload.mode
         )
         return TwinResponse(
             query=payload.query,

@@ -82,6 +82,7 @@ class TelemetryResponse(BaseModel):
 class TwinQuery(BaseModel):
     device_id: str = Field(..., example="laptop-mac-001")
     query: str = Field(..., example="Is my battery health declining or stable?")
+    mode: Optional[str] = Field(default="live", example="live")
 
 
 class TwinResponse(BaseModel):
@@ -96,6 +97,7 @@ class TwinResponse(BaseModel):
 class ChatQuery(BaseModel):
     device_id: str = Field(..., example="laptop-mac-001")
     query: str = Field(..., example="What is my CPU status?")
+    mode: Optional[str] = Field(default="live", example="live")
 
 
 class ChatResponse(BaseModel):

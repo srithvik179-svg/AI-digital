@@ -188,3 +188,27 @@ class TestEvidenceChatbotResponse:
         
         assert "Insufficient telemetry data available" in response
         assert "Confidence:\n0%" in response
+
+    def test_historical_mode_isolation(self):
+        db = _mock_db()
+        # Historical mode must refuse predictions, simulations, and current status
+        r1 = query_evidence_chatbot("test-device", "How will battery condition be after 30 days?", db, mode="historical")
+        assert "Predictions, simulations, and live status are only available in the Live AI Digital Twin" in r1["response"]
+
+        r2 = query_evidence_chatbot("test-device", "What happens if CPU reaches 95%?", db, mode="historical")
+        assert "Predictions, simulations, and live status are only available in the Live AI Digital Twin" in r2["response"]
+
+        r3 = query_evidence_chatbot("test-device", "What is CPU usage?", db, mode="historical")
+        assert "Predictions, simulations, and live status are only available in the Live AI Digital Twin" in r3["response"]
+
+    def test_live_mode_isolation(self):
+        db = _mock_db()
+        # Live mode must refuse trend analysis, correlation analysis, and root cause analysis
+        r1 = query_evidence_chatbot("test-device", "what is the root cause of high temp?", db, mode="live")
+        assert "Historical trends, correlations, and root cause analysis are only available in the Historical Telemetry Intelligence" in r1["response"]
+
+        r2 = query_evidence_chatbot("test-device", "show me the wear trend", db, mode="live")
+        assert "Historical trends, correlations, and root cause analysis are only available in the Historical Telemetry Intelligence" in r2["response"]
+
+        r3 = query_evidence_chatbot("test-device", "Does CPU affect temperature?", db, mode="live")
+        assert "Historical trends, correlations, and root cause analysis are only available in the Historical Telemetry Intelligence" in r3["response"]
