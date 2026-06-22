@@ -18,6 +18,8 @@ from app.api.v1.future_state import router as future_state_router
 from app.api.v1.live_stream import router as live_stream_router
 from app.api.v1.fleet import router as fleet_router
 from app.api.v1.executive import router as executive_router
+from app.api.v1.feedback import router as feedback_router
+from app.api.v1.metrics import router as metrics_router
 
 router = APIRouter()
 
@@ -40,6 +42,8 @@ router.include_router(future_state_router,    prefix="/future-state",       tags
 router.include_router(live_stream_router,     prefix="/live-stream",        tags=["live-stream"])
 router.include_router(fleet_router,           prefix="/fleet",              tags=["fleet"])
 router.include_router(executive_router,       prefix="/executive",          tags=["executive"])
+router.include_router(feedback_router,        prefix="/feedback",            tags=["adaptive-learning"])
+router.include_router(metrics_router,         prefix="/metrics",             tags=["monitoring"])
 
 @router.get("/health", tags=["health"])
 def health_check():

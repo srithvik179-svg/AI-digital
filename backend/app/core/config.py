@@ -21,6 +21,13 @@ class Settings(BaseSettings):
     # Logging
     LOG_LEVEL: str = Field(default="info")
 
+    # Security
+    DEBUG: bool = Field(default=True, description="Disable in production to enable HSTS and stricter policies.")
+    ALLOWED_ORIGINS: str = Field(
+        default="http://localhost:3000,http://127.0.0.1:3000",
+        description="Comma-separated list of allowed CORS origins."
+    )
+
     class Config:
         case_sensitive = True
         env_file = ".env"

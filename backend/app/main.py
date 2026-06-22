@@ -1,5 +1,6 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
 from app.core.config import settings
 from app.core.logging import logger
 from app.core.database import engine, Base
@@ -21,20 +22,37 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Set up CORS middleware
-origins = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    "*"  # In development, allow all. In production, lock this down.
+# Security hardening: parameterized CORS origins from environment variable
+allowed_origins = [
+    origin.strip()
+    for origin in settings.ALLOWED_ORIGINS.split(",")
+    if origin.strip()
 ]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=allowed_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "Accept", "X-Request-ID"],
 )
+
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    """Inject security HTTP response headers on every response."""
+    async def dispatch(self, request: Request, call_next):
+        response: Response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+        if not settings.DEBUG:
+            response.headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains; preload"
+        return response
+
+
+app.add_middleware(SecurityHeadersMiddleware)
 
 # Include unified API router
 app.include_router(api_v1_router, prefix=settings.API_V1_STR)

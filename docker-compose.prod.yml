@@ -1,0 +1,161 @@
+# ─────────────────────────────────────────────────────────────────────
+# docker-compose.prod.yml — Production Hardened Deployment
+# Usage: docker compose -f docker-compose.prod.yml up -d
+# ─────────────────────────────────────────────────────────────────────
+version: "3.9"
+
+services:
+  # ─────────────── PostgreSQL ───────────────
+  db:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?DB password required}
+      POSTGRES_DB: ${POSTGRES_DB:-telemetry_db}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      - ./backend/migrations:/docker-entrypoint-initdb.d:ro
+    networks:
+      - backend-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    security_opt:
+      - no-new-privileges:true
+
+  # ─────────────── Redis ────────────────────
+  redis:
+    image: redis:7-alpine
+    restart: always
+    command: redis-server --requirepass ${REDIS_PASSWORD:?Redis password required} --maxmemory 256mb --maxmemory-policy allkeys-lru
+    networks:
+      - backend-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    security_opt:
+      - no-new-privileges:true
+
+  # ─────────────── Neo4j ────────────────────
+  neo4j:
+    image: neo4j:5-enterprise
+    restart: always
+    environment:
+      NEO4J_AUTH: ${NEO4J_USER:-neo4j}/${NEO4J_PASSWORD:?Neo4j password required}
+      NEO4J_PLUGINS: '["apoc"]'
+      NEO4J_dbms_security_procedures_unrestricted: "apoc.*"
+      NEO4J_server_memory_heap_initial__size: "512m"
+      NEO4J_server_memory_heap_max__size: "1G"
+    volumes:
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+    networks:
+      - backend-net
+    security_opt:
+      - no-new-privileges:true
+
+  # ─────────────── ChromaDB ─────────────────
+  chromadb:
+    image: chromadb/chroma:latest
+    restart: always
+    volumes:
+      - chroma_data:/chroma/chroma
+    networks:
+      - backend-net
+    security_opt:
+      - no-new-privileges:true
+
+  # ─────────────── FastAPI Backend ──────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: production
+    restart: always
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-telemetry_db}
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
+      CHROMA_HOST: chromadb
+      CHROMA_PORT: 8000
+      NEO4J_URI: bolt://neo4j:7687
+      NEO4J_USER: ${NEO4J_USER:-neo4j}
+      NEO4J_PASSWORD: ${NEO4J_PASSWORD}
+      MOCK_LLM: ${MOCK_LLM:-false}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:?OpenAI API key required}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-https://your-domain.com}
+      DEBUG: "false"
+      LOG_LEVEL: "warning"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      neo4j:
+        condition: service_started
+      chromadb:
+        condition: service_started
+    networks:
+      - backend-net
+      - frontend-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+
+  # ─────────────── Next.js Frontend ─────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: production
+    restart: always
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: ${API_BASE_URL:-https://api.your-domain.com}
+    depends_on:
+      - backend
+    networks:
+      - frontend-net
+    security_opt:
+      - no-new-privileges:true
+
+  # ─────────────── Nginx Reverse Proxy ──────
+  nginx:
+    image: nginx:1.27-alpine
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.prod.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - frontend-net
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  pg_data:
+  neo4j_data:
+  neo4j_logs:
+  chroma_data:
+
+networks:
+  backend-net:
+    driver: bridge
+    internal: true
+  frontend-net:
+    driver: bridge
