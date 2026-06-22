@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.logging import logger
 from app.schemas.telemetry import TwinQuery, TwinResponse
-from app.services.langchain_twin import query_digital_twin
+from app.services.evidence_chatbot import query_evidence_chatbot
 
 router = APIRouter()
 
@@ -18,7 +18,7 @@ def query_twin_agent(
     """
     try:
         logger.info(f"Querying digital twin for device '{payload.device_id}' with question: '{payload.query}'")
-        result = query_digital_twin(
+        result = query_evidence_chatbot(
             device_id=payload.device_id,
             query=payload.query,
             db_session=db
