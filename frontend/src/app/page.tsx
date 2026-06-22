@@ -1,28 +1,84 @@
 'use client';
 
 import React, { useEffect, useState, useRef } from 'react';
+import dynamic from 'next/dynamic';
 import { TelemetryData, ActiveAlert, NLSummary } from '@/types';
 import TwinStatus from '@/components/dashboard/TwinStatus';
-import TelemetryCharts from '@/components/dashboard/TelemetryCharts';
 import ChatInterface from '@/components/dashboard/ChatInterface';
 import AlertsPanel from '@/components/dashboard/AlertsPanel';
 import SummaryCard from '@/components/dashboard/SummaryCard';
 import TelemetrySearch from '@/components/dashboard/TelemetrySearch';
-import CorrelationDashboard from '@/components/dashboard/CorrelationDashboard';
-import DependencyGraph from '@/components/dashboard/DependencyGraph';
-import KnowledgeGraphExplorer from '@/components/dashboard/KnowledgeGraphExplorer';
-import ReplayConsole from '@/components/dashboard/ReplayConsole';
-import TimeTravelPlayground from '@/components/dashboard/TimeTravelPlayground';
-import ReasoningEngine from '@/components/dashboard/ReasoningEngine';
-import RootCauseAnalysis from '@/components/dashboard/RootCauseAnalysis';
-import AIReasoningDashboard from '@/components/dashboard/AIReasoningDashboard';
-import WhatIfSimulationDashboard from '@/components/dashboard/WhatIfSimulationDashboard';
-import FutureStateDashboard from '@/components/dashboard/FutureStateDashboard';
-import LiveIngestionStatus from '@/components/dashboard/LiveIngestionStatus';
-import FleetDashboard from '@/components/dashboard/FleetDashboard';
-import DigitalTwin3D from '@/components/dashboard/DigitalTwin3D';
-import ExecutiveDashboard from '@/components/dashboard/ExecutiveDashboard';
 import { Terminal, Settings, Play, ShieldAlert, Cpu, CheckCircle2, Upload, AlertCircle, Loader, ArrowLeft, History } from 'lucide-react';
+
+// Loader fallback for dynamic dashboard panels
+const LoadingWidget = ({ name }: { name: string }) => (
+  <div className="glass-panel rounded-2xl p-8 border border-white/5 flex flex-col items-center justify-center min-h-[220px] bg-slate-950/30">
+    <Loader className="h-6 w-6 animate-spin text-indigo-500 mb-2" />
+    <span className="text-slate-400 text-xs font-semibold animate-pulse">Initializing {name}...</span>
+  </div>
+);
+
+// Dynamically imported components (client-side only)
+const TelemetryCharts = dynamic(() => import('@/components/dashboard/TelemetryCharts'), {
+  ssr: false,
+  loading: () => <LoadingWidget name="Telemetry Charts" />
+});
+const CorrelationDashboard = dynamic(() => import('@/components/dashboard/CorrelationDashboard'), {
+  ssr: false,
+  loading: () => <LoadingWidget name="Correlation Analytics" />
+});
+const DependencyGraph = dynamic(() => import('@/components/dashboard/DependencyGraph'), {
+  ssr: false,
+  loading: () => <LoadingWidget name="Causal Dependency Network" />
+});
+const KnowledgeGraphExplorer = dynamic(() => import('@/components/dashboard/KnowledgeGraphExplorer'), {
+  ssr: false,
+  loading: () => <LoadingWidget name="Neo4j Knowledge Explorer" />
+});
+const ReplayConsole = dynamic(() => import('@/components/dashboard/ReplayConsole'), {
+  ssr: false,
+  loading: () => <LoadingWidget name="Replay Control Console" />
+});
+const TimeTravelPlayground = dynamic(() => import('@/components/dashboard/TimeTravelPlayground'), {
+  ssr: false,
+  loading: () => <LoadingWidget name="Scenario Planner" />
+});
+const ReasoningEngine = dynamic(() => import('@/components/dashboard/ReasoningEngine'), {
+  ssr: false,
+  loading: () => <LoadingWidget name="Reasoning Engine" />
+});
+const RootCauseAnalysis = dynamic(() => import('@/components/dashboard/RootCauseAnalysis'), {
+  ssr: false,
+  loading: () => <LoadingWidget name="Root Cause Diagnostics" />
+});
+const AIReasoningDashboard = dynamic(() => import('@/components/dashboard/AIReasoningDashboard'), {
+  ssr: false,
+  loading: () => <LoadingWidget name="AI Inference Engine" />
+});
+const WhatIfSimulationDashboard = dynamic(() => import('@/components/dashboard/WhatIfSimulationDashboard'), {
+  ssr: false,
+  loading: () => <LoadingWidget name="What-If Sim Environment" />
+});
+const FutureStateDashboard = dynamic(() => import('@/components/dashboard/FutureStateDashboard'), {
+  ssr: false,
+  loading: () => <LoadingWidget name="ML Trend Predictor" />
+});
+const LiveIngestionStatus = dynamic(() => import('@/components/dashboard/LiveIngestionStatus'), {
+  ssr: false,
+  loading: () => <LoadingWidget name="Live Stream Broker" />
+});
+const FleetDashboard = dynamic(() => import('@/components/dashboard/FleetDashboard'), {
+  ssr: false,
+  loading: () => <LoadingWidget name="Multi-Device Manager" />
+});
+const DigitalTwin3D = dynamic(() => import('@/components/dashboard/DigitalTwin3D'), {
+  ssr: false,
+  loading: () => <LoadingWidget name="Interactive 3D Mesh" />
+});
+const ExecutiveDashboard = dynamic(() => import('@/components/dashboard/ExecutiveDashboard'), {
+  ssr: false,
+  loading: () => <LoadingWidget name="Operational Summary Centre" />
+});
 
 const DEVICE_ID = "laptop-mac-001";
 
