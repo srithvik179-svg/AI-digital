@@ -86,47 +86,48 @@ export default function Dashboard() {
   const [appModule, setAppModule] = useState<'landing' | 'historical' | 'live'>('landing');
   const [liveTab, setLiveTab] = useState<'state' | 'prediction' | 'simulation'>('state');
   const [dashboardMode, setDashboardMode] = useState<'executive' | 'detailed'>('detailed');
-  const [telemetryHistory, setTelemetryHistory] = useState<TelemetryData[]>([]);
-  const [latestData, setLatestData] = useState<TelemetryData | null>(null);
-  const [activeAlerts, setActiveAlerts] = useState<ActiveAlert[]>([]);
-  const [nlSummary, setNlSummary] = useState<NLSummary | null>(null);
-  const [tickCount, setTickCount] = useState(0);
-  const [isConnected, setIsConnected] = useState(false);
-  const [isSimulating, setIsSimulating] = useState(false);
 
-  // Phase 18 & 19: Replay & Time Travel States
-  const [isReplayActive, setIsReplayActive] = useState(false);
-  const isReplayActiveRef = useRef(false);
-  const [projections, setProjections] = useState<any[] | null>(null);
+  // =========================================================================
+  // 1. HISTORICAL TELEMETRY STORE
+  // =========================================================================
+  const [historicalHistory, setHistoricalHistory] = useState<TelemetryData[]>([]);
+  const [historicalLatestData, setHistoricalLatestData] = useState<TelemetryData | null>(null);
+  const [historicalActiveAlerts, setHistoricalActiveAlerts] = useState<ActiveAlert[]>([]);
+  const [historicalNlSummary, setHistoricalNlSummary] = useState<NLSummary | null>(null);
+  const [historicalTickCount, setHistoricalTickCount] = useState(0);
+  const [historicalReplayActive, setHistoricalReplayActive] = useState(false);
+  const historicalReplayActiveRef = useRef(false);
+  const [historicalReplayFrame, setHistoricalReplayFrame] = useState<TelemetryData | null>(null);
 
   const handleReplayActiveChange = (isActive: boolean) => {
-    setIsReplayActive(isActive);
-    isReplayActiveRef.current = isActive;
+    setHistoricalReplayActive(isActive);
+    historicalReplayActiveRef.current = isActive;
   };
 
   const handleReplayFrameChange = (frame: TelemetryData | null) => {
     if (frame) {
-      setLatestData(frame);
-      if (frame.active_alerts) {
-        setActiveAlerts(frame.active_alerts);
-      }
-      if (frame.nl_summary) {
-        setNlSummary(frame.nl_summary);
-      }
+      setHistoricalReplayFrame(frame);
     } else {
-      // Replay stopped, reset to live latest tick
-      if (telemetryHistory.length > 0) {
-        const liveLatest = telemetryHistory[0];
-        setLatestData(liveLatest);
-        if (liveLatest.active_alerts) {
-          setActiveAlerts(liveLatest.active_alerts);
-        }
-        if (liveLatest.nl_summary) {
-          setNlSummary(liveLatest.nl_summary);
-        }
-      }
+      setHistoricalReplayFrame(null);
     }
   };
+
+  // =========================================================================
+  // 2. LIVE TELEMETRY STORE
+  // =========================================================================
+  const [liveHistory, setLiveHistory] = useState<TelemetryData[]>([]);
+  const [liveLatestData, setLiveLatestData] = useState<TelemetryData | null>(null);
+  const [liveActiveAlerts, setLiveActiveAlerts] = useState<ActiveAlert[]>([]);
+  const [liveNlSummary, setLiveNlSummary] = useState<NLSummary | null>(null);
+  const [liveTickCount, setLiveTickCount] = useState(0);
+
+  // =========================================================================
+  // 3. SIMULATION & PREDICTION STORE
+  // =========================================================================
+  const [simulationProjections, setSimulationProjections] = useState<any[] | null>(null);
+
+  const [isConnected, setIsConnected] = useState(false);
+  const [isSimulating, setIsSimulating] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<{
     status: 'idle' | 'uploading' | 'success' | 'error';
     importedCount?: number;
@@ -167,13 +168,16 @@ export default function Dashboard() {
 
       if (fileInputRef.current) fileInputRef.current.value = '';
 
-      // Immediately fetch latest logs to populate chart
+      // Immediately fetch latest logs to populate historical store
       const fetchResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'}/telemetry/?device_id=${DEVICE_ID}&limit=30`);
       if (fetchResponse.ok) {
         const data = await fetchResponse.json();
         if (data.length > 0) {
-          setLatestData(data[0]);
-          setTelemetryHistory(data);
+          setHistoricalLatestData(data[0]);
+          setHistoricalHistory(data);
+          if (data[0].active_alerts) setHistoricalActiveAlerts(data[0].active_alerts);
+          if (data[0].nl_summary) setHistoricalNlSummary(data[0].nl_summary);
+          setHistoricalTickCount(c => c + 1);
         }
       }
     } catch (e: any) {
@@ -184,6 +188,36 @@ export default function Dashboard() {
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
+
+  // Setup initial telemetry data on mount
+  useEffect(() => {
+    const fetchInitialData = async () => {
+      try {
+        const fetchResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'}/telemetry/?device_id=${DEVICE_ID}&limit=30`);
+        if (fetchResponse.ok) {
+          const data = await fetchResponse.json();
+          if (data.length > 0) {
+            // Populate Historical Analysis Store
+            setHistoricalLatestData(data[0]);
+            setHistoricalHistory(data);
+            if (data[0].active_alerts) setHistoricalActiveAlerts(data[0].active_alerts);
+            if (data[0].nl_summary) setHistoricalNlSummary(data[0].nl_summary);
+            setHistoricalTickCount(1);
+
+            // Populate Live Telemetry Store
+            setLiveLatestData(data[0]);
+            setLiveHistory(data);
+            if (data[0].active_alerts) setLiveActiveAlerts(data[0].active_alerts);
+            if (data[0].nl_summary) setLiveNlSummary(data[0].nl_summary);
+            setLiveTickCount(1);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load initial workspace data:", err);
+      }
+    };
+    fetchInitialData();
+  }, []);
 
   // Setup WebSocket connection
   useEffect(() => {
@@ -213,22 +247,19 @@ export default function Dashboard() {
           if (isUnmounted) return;
           try {
             const payload = JSON.parse(event.data);
-              if (payload.type === 'telemetry_update') {
-                const data = payload.data as TelemetryData;
-                setTelemetryHistory(prev => [data, ...prev].slice(0, 60));
-                setTickCount(c => c + 1);
-                
-                // Only update dials and summary if replay is not active!
-                if (!isReplayActiveRef.current) {
-                  setLatestData(data);
-                  if (data.active_alerts) {
-                    setActiveAlerts(data.active_alerts);
-                  }
-                  if (data.nl_summary) {
-                    setNlSummary(data.nl_summary);
-                  }
-                }
+            if (payload.type === 'telemetry_update') {
+              const data = payload.data as TelemetryData;
+              // WS updates only populate the Live Telemetry Store
+              setLiveHistory(prev => [data, ...prev].slice(0, 60));
+              setLiveTickCount(c => c + 1);
+              setLiveLatestData(data);
+              if (data.active_alerts) {
+                setLiveActiveAlerts(data.active_alerts);
               }
+              if (data.nl_summary) {
+                setLiveNlSummary(data.nl_summary);
+              }
+            }
           } catch (err) {
             console.error("Failed to parse WebSocket message:", err);
           }
@@ -498,7 +529,12 @@ export default function Dashboard() {
             {/* Historical controls bar */}
             <div className="glass-panel rounded-2xl p-5 border border-white/5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
               <div>
-                <h2 className="text-sm font-bold text-white">Historical Data: {DEVICE_ID}</h2>
+                <div className="flex items-center gap-3">
+                  <h2 className="text-sm font-bold text-white">Historical Data: {DEVICE_ID}</h2>
+                  <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 font-bold uppercase tracking-wider">
+                    Data Source: Historical CSV Dataset
+                  </span>
+                </div>
                 <p className="text-slate-400 text-xs mt-0.5">
                   Analyzing uploaded CSV datasets, historical alerts database, and system logs.
                 </p>
@@ -567,46 +603,47 @@ export default function Dashboard() {
             )}
 
             {/* Collapsible summary card */}
-            <SummaryCard summary={nlSummary} isConnected={isConnected} />
+            <SummaryCard summary={historicalNlSummary} isConnected={isConnected} />
 
             {/* Twin Status (HUD Cards & Score breakdown) */}
-            <TwinStatus latestData={latestData} isConnected={isConnected} />
+            <TwinStatus 
+              latestData={historicalReplayActive && historicalReplayFrame ? historicalReplayFrame : historicalLatestData} 
+              isConnected={isConnected} 
+            />
 
             {/* Telemetry Search */}
             <div className="grid grid-cols-1 gap-6">
               <TelemetrySearch deviceId={DEVICE_ID} />
             </div>
 
-            {/* Historical Replay Console & Time Travel Scenario Planner */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Historical Replay Console (Time Travel is isolated to the Simulation tab) */}
+            <div className="grid grid-cols-1 gap-6">
               <ReplayConsole
                 deviceId={DEVICE_ID}
                 onFrameChange={handleReplayFrameChange}
                 onReplayActiveChange={handleReplayActiveChange}
               />
-              <TimeTravelPlayground
-                deviceId={DEVICE_ID}
-                selectedTimestamp={latestData?.timestamp || null}
-                onProjectionLoaded={setProjections}
-              />
             </div>
 
             {/* Historical Telemetry Charts */}
-            <TelemetryCharts data={telemetryHistory} projections={projections} />
+            <TelemetryCharts data={historicalHistory} projections={null} />
 
             {/* Correlation Matrix and Influence topology graph */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <CorrelationDashboard deviceId={DEVICE_ID} tickCount={tickCount} />
-              <DependencyGraph deviceId={DEVICE_ID} tickCount={tickCount} />
+              <CorrelationDashboard deviceId={DEVICE_ID} tickCount={historicalTickCount} />
+              <DependencyGraph deviceId={DEVICE_ID} tickCount={historicalTickCount} />
             </div>
 
             {/* Alerts database and Root Cause diagnostics */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <AlertsPanel alerts={activeAlerts} deviceId={DEVICE_ID} />
+              <AlertsPanel 
+                alerts={historicalReplayActive && historicalReplayFrame ? (historicalReplayFrame.active_alerts || []) : historicalActiveAlerts} 
+                deviceId={DEVICE_ID} 
+              />
               <RootCauseAnalysis 
                 deviceId={DEVICE_ID} 
-                latestSnapshotId={latestData?.id} 
-                tickCount={tickCount} 
+                latestSnapshotId={historicalReplayActive && historicalReplayFrame ? historicalReplayFrame.id : historicalLatestData?.id} 
+                tickCount={historicalTickCount} 
               />
             </div>
 
@@ -616,8 +653,8 @@ export default function Dashboard() {
             {/* Rule-Based Reasoning Engine */}
             <ReasoningEngine 
               deviceId={DEVICE_ID} 
-              latestSnapshotId={latestData?.id} 
-              tickCount={tickCount} 
+              latestSnapshotId={historicalReplayActive && historicalReplayFrame ? historicalReplayFrame.id : historicalLatestData?.id} 
+              tickCount={historicalTickCount} 
             />
 
             {/* Historical AI Chat & Raw Log Stream */}
@@ -635,10 +672,10 @@ export default function Dashboard() {
                   <span className="text-[10px] text-slate-500">Last 10 loaded ticks</span>
                 </div>
                 <div className="p-4 font-mono text-[11px] leading-relaxed max-h-[440px] h-[440px] overflow-y-auto bg-slate-950/40 text-slate-400 space-y-1">
-                  {telemetryHistory.length === 0 ? (
+                  {historicalHistory.length === 0 ? (
                     <div className="text-center py-6 text-slate-600">Awaiting CSV upload or data logs...</div>
                   ) : (
-                    telemetryHistory.slice(0, 10).map((log, idx) => (
+                    historicalHistory.slice(0, 10).map((log, idx) => (
                       <div key={idx} className="flex items-start border-b border-white/[0.02] pb-1 hover:bg-white/[0.01] px-2 rounded">
                         <span className="text-slate-500 mr-3 shrink-0">[{new Date(log.timestamp).toLocaleTimeString()}]</span>
                         <span className="text-amber-400 mr-2 shrink-0">history:</span>
@@ -660,7 +697,12 @@ export default function Dashboard() {
             {/* Live stream status bar */}
             <div className="glass-panel rounded-2xl p-5 border border-white/5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
               <div>
-                <h2 className="text-sm font-bold text-white">Live Monitor: {DEVICE_ID}</h2>
+                <div className="flex items-center gap-3">
+                  <h2 className="text-sm font-bold text-white">Live Monitor: {DEVICE_ID}</h2>
+                  <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-bold uppercase tracking-wider">
+                    Data Source: Real-Time Laptop Telemetry
+                  </span>
+                </div>
                 <p className="text-slate-400 text-xs mt-0.5">
                   Streaming hardware sensor metrics and forecasting dynamic operational health bounds.
                 </p>
@@ -678,12 +720,12 @@ export default function Dashboard() {
                 >
                   {isSimulating ? (
                     <>
-                      <CheckCircle2 className="h-4 w-4" />
+                      <CheckCircle2 className="h-4.5 w-4.5" />
                       Telemetry Streaming Live
                     </>
                   ) : (
                     <>
-                      <Play className="h-4 w-4 fill-current" />
+                      <Play className="h-4.5 w-4.5 fill-current" />
                       Start Live Simulation Stream
                     </>
                   )}
@@ -738,10 +780,10 @@ export default function Dashboard() {
                 <DigitalTwin3D />
 
                 {/* Dashboard HUD Cards & Live score breakdown */}
-                <TwinStatus latestData={latestData} isConnected={isConnected} />
+                <TwinStatus latestData={liveLatestData} isConnected={isConnected} />
 
-                {/* Live Telemetry rolling charts */}
-                <TelemetryCharts data={telemetryHistory} projections={projections} />
+                {/* Live Telemetry rolling charts (simulation/time-travel is explicitly isolated and excluded here) */}
+                <TelemetryCharts data={liveHistory} projections={null} />
 
                 {/* Live Chat Interface and Raw telemetry logs console */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -758,10 +800,10 @@ export default function Dashboard() {
                       <span className="text-[10px] text-slate-500">Showing last 10 frames</span>
                     </div>
                     <div className="p-4 font-mono text-[11px] leading-relaxed max-h-[440px] h-[440px] overflow-y-auto bg-slate-950/40 text-slate-400 space-y-1">
-                      {telemetryHistory.length === 0 ? (
+                      {liveHistory.length === 0 ? (
                         <div className="text-center py-6 text-slate-600">Awaiting stream packets...</div>
                       ) : (
-                        telemetryHistory.slice(0, 10).map((log, idx) => (
+                        liveHistory.slice(0, 10).map((log, idx) => (
                           <div key={idx} className="flex items-start border-b border-white/[0.02] pb-1 hover:bg-white/[0.01] px-2 rounded">
                             <span className="text-slate-500 mr-3 shrink-0">[{new Date(log.timestamp).toLocaleTimeString()}]</span>
                             <span className="text-indigo-400 mr-2 shrink-0">info:</span>
@@ -779,11 +821,22 @@ export default function Dashboard() {
 
             {liveTab === 'prediction' && (
               <>
+                {/* Prediction Badge bar */}
+                <div className="glass-panel rounded-2xl p-5 border border-white/5 flex justify-between items-center bg-slate-950/20">
+                  <div>
+                    <h2 className="text-sm font-bold text-white">Future State Predictions: {DEVICE_ID}</h2>
+                    <p className="text-slate-400 text-xs mt-0.5">ML forecasts and multi-model horizon analysis.</p>
+                  </div>
+                  <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 font-bold uppercase tracking-wider">
+                    Data Source: Forecast Model
+                  </span>
+                </div>
+
                 {/* XGBoost · LSTM · Prophet Predictions */}
                 <FutureStateDashboard />
 
                 {/* AI Reasoning Dashboard (Anomaly detection, confidence scores, recommendations) */}
-                <AIReasoningDashboard deviceId={DEVICE_ID} tickCount={tickCount} />
+                <AIReasoningDashboard deviceId={DEVICE_ID} tickCount={liveTickCount} />
 
                 {/* Live AI chat */}
                 <div className="grid grid-cols-1 gap-6">
@@ -794,6 +847,17 @@ export default function Dashboard() {
 
             {liveTab === 'simulation' && (
               <>
+                {/* Simulation Badge bar */}
+                <div className="glass-panel rounded-2xl p-5 border border-white/5 flex justify-between items-center bg-slate-950/20">
+                  <div>
+                    <h2 className="text-sm font-bold text-white">What-If Steady-State Simulator: {DEVICE_ID}</h2>
+                    <p className="text-slate-400 text-xs mt-0.5">Iterative physics convergence and time travel planning.</p>
+                  </div>
+                  <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-pink-500/10 border border-pink-500/20 text-pink-400 font-bold uppercase tracking-wider">
+                    Data Source: What-If Simulation
+                  </span>
+                </div>
+
                 {/* What-If Steady State Simulation Engine */}
                 <WhatIfSimulationDashboard />
 
@@ -801,9 +865,20 @@ export default function Dashboard() {
                 <div className="grid grid-cols-1 gap-6">
                   <TimeTravelPlayground
                     deviceId={DEVICE_ID}
-                    selectedTimestamp={latestData?.timestamp || null}
-                    onProjectionLoaded={setProjections}
+                    selectedTimestamp={liveLatestData?.timestamp || null}
+                    onProjectionLoaded={setSimulationProjections}
                   />
+                </div>
+
+                {/* Time-Travel Scenario Plotter (isolated overlay rendering) */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Scenario Projection Overlay</h3>
+                    <span className="text-[10px] font-bold text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded-full">
+                      Dashed lines represent projected metrics
+                    </span>
+                  </div>
+                  <TelemetryCharts data={liveHistory} projections={simulationProjections} />
                 </div>
 
                 {/* Live AI chat */}
