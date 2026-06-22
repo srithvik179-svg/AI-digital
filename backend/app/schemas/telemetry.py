@@ -88,6 +88,8 @@ class TwinResponse(BaseModel):
     query: str
     response: str
     source_documents: list[str] = []
+    evidence: list[dict] = []
+    steps: list[dict] = []
     timestamp: datetime = Field(default_factory=datetime.utcnow)
 
 
@@ -100,6 +102,8 @@ class ChatResponse(BaseModel):
     query: str
     response: str
     source_documents: list[str] = []
+    evidence: list[dict] = []
+    steps: list[dict] = []
     timestamp: datetime = Field(default_factory=datetime.utcnow)
 
 

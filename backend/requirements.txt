@@ -18,3 +18,4 @@ scikit-learn>=1.2.0
 xgboost>=1.7.0
 pandas>=2.0.0
 numpy>=1.22.0
+psutil>=5.9.0

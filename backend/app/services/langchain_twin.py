@@ -117,8 +117,11 @@ def index_telemetry_in_vector_db(record: Any):
     }
     
     try:
+        from app.services.ai_reasoning.embeddings import telemetry_embeddings
+        doc_embeddings = telemetry_embeddings.embed_documents([content])
         collection.upsert(
             documents=[content],
+            embeddings=doc_embeddings,
             metadatas=[metadata],
             ids=[doc_id]
         )
@@ -127,122 +130,44 @@ def index_telemetry_in_vector_db(record: Any):
         logger.error(f"Failed to upsert document to ChromaDB: {str(e)}")
 
 
-def query_digital_twin(device_id: str, query: str, db_session) -> Dict[str, Any]:
+def query_digital_twin(device_id: str, query: str, db_session, personality: str = "diagnostic_engineer") -> Dict[str, Any]:
     """
     Retrieval-Augmented Generation (RAG) query engine.
     1. Retrieves context from ChromaDB (falls back & syncs from PostgreSQL if Chroma is empty).
     2. Assembles structured, cited contexts.
     3. Executes a grounded generator (GPT-4 or Grounded Cognitive Solver) to prevent hallucinations.
     """
-    from sqlalchemy.orm import joinedload
-    
+    from app.services.ai_reasoning.guardrails import validate_input, validate_output
+    from app.services.ai_reasoning.chain_of_thought import parse_cot_response, generate_local_cot
+    input_status = validate_input(query)
+    if not input_status.is_valid:
+        return {
+            "query": query,
+            "response": input_status.reason or "Query validation failed.",
+            "source_documents": [],
+            "evidence": [],
+            "steps": []
+        }
+        
     query_lower = query.lower().strip()
     
     # ─── 1. RETRIEVAL LAYER ──────────────────────────────────────────────────
-    retrieved_docs = []
-    retrieved_metadatas = []
-    
+    from app.services.ai_reasoning.retrieval_ranking import hybrid_retrieve_and_rank
     try:
-        # Query ChromaDB collection
-        query_results = collection.query(
-            query_texts=[query],
-            n_results=5,
-            where={"device_id": device_id}
+        retrieved_docs, retrieved_metadatas = hybrid_retrieve_and_rank(
+            query=query,
+            device_id=device_id,
+            db_session=db_session,
+            collection=collection,
+            n_results=5
         )
-        
-        if query_results and query_results.get("documents") and len(query_results["documents"][0]) > 0:
-            retrieved_docs = query_results["documents"][0]
-            retrieved_metadatas = query_results["metadatas"][0]
-            logger.info(f"Retrieved {len(retrieved_docs)} records from ChromaDB for RAG.")
-    except Exception as chroma_err:
-        logger.error(f"ChromaDB retrieval error: {str(chroma_err)}. Querying DB snapshots directly.")
+    except Exception as e:
+        logger.error(f"Hybrid retrieval and ranking failed: {e}")
+        retrieved_docs, retrieved_metadatas = [], []
 
-    # Fallback & Database Sync: If Chroma is empty or offline, query PostgreSQL
-    if not retrieved_docs:
-        recent_snapshots = (
-            db_session.query(TelemetrySnapshot)
-            .options(
-                joinedload(TelemetrySnapshot.cpu),
-                joinedload(TelemetrySnapshot.gpu),
-                joinedload(TelemetrySnapshot.memory),
-                joinedload(TelemetrySnapshot.battery),
-                joinedload(TelemetrySnapshot.disk),
-                joinedload(TelemetrySnapshot.wifi),
-                joinedload(TelemetrySnapshot.thermal),
-                joinedload(TelemetrySnapshot.power)
-            )
-            .filter(TelemetrySnapshot.device_id == device_id)
-            .order_by(TelemetrySnapshot.timestamp.desc())
-            .limit(10)
-            .all()
-        )
-        
-        if recent_snapshots:
-            logger.info(f"Syncing {len(recent_snapshots)} snapshots to ChromaDB & compiling context.")
-            for snap in recent_snapshots:
-                try:
-                    index_telemetry_in_vector_db(snap)
-                except Exception as index_err:
-                    logger.error(f"Failed to auto-index snapshot: {str(index_err)}")
-                    
-            # Try to query ChromaDB one more time after sync
-            try:
-                query_results = collection.query(
-                    query_texts=[query],
-                    n_results=5,
-                    where={"device_id": device_id}
-                )
-                if query_results and query_results.get("documents") and len(query_results["documents"][0]) > 0:
-                    retrieved_docs = query_results["documents"][0]
-                    retrieved_metadatas = query_results["metadatas"][0]
-            except Exception:
-                pass
-            
-            # If Chroma is completely disabled/offline, build retrieved context directly from database models
-            if not retrieved_docs:
-                for snap in recent_snapshots:
-                    timestamp_str = snap.timestamp.strftime("%Y-%m-%d %H:%M:%S")
-                    cpu_usage = snap.cpu.cpu_usage if snap.cpu else 0.0
-                    memory_usage = snap.memory.memory_usage if snap.memory else 0.0
-                    disk_usage = snap.disk.disk_usage if snap.disk else 0.0
-                    cpu_temp = snap.thermal.cpu_temperature if snap.thermal else 0.0
-                    fan_speed = snap.thermal.fan_speed_rpm if snap.thermal else 0
-                    battery_level = snap.battery.battery_level if snap.battery else 0.0
-                    battery_health = snap.battery.battery_health if snap.battery else 100.0
-                    power_source = snap.power.power_source if snap.power else "ac"
-                    active_processes = snap.cpu.active_process_count if snap.cpu else 0
-                    cpu_freq = snap.cpu.cpu_frequency_mhz if (snap.cpu and snap.cpu.cpu_frequency_mhz is not None) else None
-                    gpu_usage = snap.gpu.gpu_usage if snap.gpu else 0.0
-                    gpu_temp = snap.gpu.gpu_temperature if snap.gpu else 0.0
-                    cycle_count = snap.battery.cycle_count if snap.battery else 0
-                    
-                    content = (
-                        f"[Telemetry Record for {device_id} at {timestamp_str}] "
-                        f"CPU load is {cpu_usage}%. Memory usage is {memory_usage}%. "
-                        f"Disk usage space used is {disk_usage}%. CPU core temperature is {cpu_temp}°C with "
-                        f"cooling fan active at {fan_speed} RPM. Battery charge level is {battery_level}% (health: {battery_health}%) "
-                        f"connected via power source {power_source.upper()}. Active running processes: {active_processes}. "
-                        f"GPU usage is {gpu_usage}% with temperature {gpu_temp}°C. "
-                        f"CPU frequency is {cpu_freq or 0.0} MHz. Battery cycle count is {cycle_count}."
-                    )
-                    
-                    retrieved_docs.append(content)
-                    retrieved_metadatas.append({
-                        "timestamp": timestamp_str,
-                        "cpu_usage": cpu_usage,
-                        "memory_usage": memory_usage,
-                        "cpu_temperature": cpu_temp,
-                        "battery_health": battery_health,
-                        "battery_level": battery_level,
-                        "power_source": power_source,
-                        "fan_rpm": fan_speed,
-                        "disk_usage": disk_usage,
-                        "active_processes": active_processes,
-                        "cpu_frequency_mhz": float(cpu_freq) if cpu_freq is not None else 0.0,
-                        "gpu_usage": float(gpu_usage),
-                        "gpu_temperature": float(gpu_temp) if gpu_temp is not None else 0.0,
-                        "cycle_count": int(cycle_count) if cycle_count is not None else 0
-                    })
+    from app.services.ai_reasoning.evidence_extractor import extract_evidence
+    evidence_items = extract_evidence(retrieved_docs)
+    evidence_serialized = [item.model_dump() for item in evidence_items]
 
     # ─── 2. CONTEXT ASSEMBLY ─────────────────────────────────────────────────
     context_lines = []
@@ -263,29 +188,38 @@ def query_digital_twin(device_id: str, query: str, db_session) -> Dict[str, Any]
         return {
             "query": query,
             "response": "I cannot find evidence in the telemetry logs to answer this question.",
-            "source_documents": retrieved_docs
+            "source_documents": retrieved_docs,
+            "evidence": evidence_serialized,
+            "steps": []
         }
 
     # REAL LLM RAG Mode (if OpenAI API Key is valid and MOCK_LLM is disabled)
     if not settings.MOCK_LLM and settings.OPENAI_API_KEY != "mock_key":
         try:
-            prompt_template = """You are TwinIntel, the AI Digital Twin of a laptop.
-You MUST answer the user's question about the laptop state strictly and objectively using ONLY the provided telemetry logs context.
-
-Rules:
-1. Answer the question using ONLY the provided telemetry logs. Do not make up facts, assume metrics, or extrapolate out-of-scope details.
-2. Every fact, statement, or warning you state MUST be backed by evidence in the context.
-3. You MUST explicitly cite the specific timestamp of the telemetry record (e.g., "[Source: Telemetry at 2026-06-20 20:00:00]") for every statement you make.
-4. If the telemetry logs context does not contain the information required to answer the question, or if there is no context, you must answer exactly: "I cannot find evidence in the telemetry logs to answer this question."
-
-Context from vector telemetry logs:
-{context}
-
-Question: {question}
-Answer (citing specific telemetry records):"""
+            from app.models.alert import TelemetryAlert
             
-            PROMPT = PromptTemplate(
-                template=prompt_template, input_variables=["context", "question"]
+            # Query DB for live prompt variables
+            alerts_count = db_session.query(TelemetryAlert).filter(
+                TelemetryAlert.device_id == device_id,
+                TelemetryAlert.acknowledged == False
+            ).count()
+            
+            latest_snap = db_session.query(TelemetrySnapshot).filter(
+                TelemetrySnapshot.device_id == device_id
+            ).order_by(TelemetrySnapshot.timestamp.desc()).first()
+            
+            health_score = latest_snap.health_score if (latest_snap and latest_snap.health_score is not None) else 100.0
+            health_category = latest_snap.health_category if (latest_snap and latest_snap.health_category is not None) else "Healthy"
+            
+            from app.services.ai_reasoning.prompts import prompt_registry
+            compiled_prompt = prompt_registry.get_prompt(
+                personality=personality,
+                device_id=device_id,
+                alerts_count=alerts_count,
+                health_score=health_score,
+                health_category=health_category,
+                context=context,
+                question=query
             )
             
             llm = ChatOpenAI(
@@ -294,13 +228,16 @@ Answer (citing specific telemetry records):"""
                 openai_api_key=settings.OPENAI_API_KEY
             )
             
-            # Simple direct prompt generation
-            formatted_prompt = PROMPT.format(context=context, question=query)
-            result = llm.predict(formatted_prompt)
+            result = llm.predict(compiled_prompt)
             
+            final_response, steps = parse_cot_response(result.strip())
+            _, final_response = validate_output(final_response, evidence_items)
             return {
-                "response": result.strip(),
-                "source_documents": retrieved_docs
+                "query": query,
+                "response": final_response,
+                "source_documents": retrieved_docs,
+                "evidence": evidence_serialized,
+                "steps": [s.model_dump() for s in steps]
             }
         except Exception as e:
             logger.error(f"Error in OpenAI LLM execution: {str(e)}. Falling back to Grounded Cognitive Solver.")
@@ -431,8 +368,13 @@ Answer (citing specific telemetry records):"""
         )
         responses.append(resp)
 
+    response_text = "\n".join(responses)
+    _, final_response = validate_output(response_text, evidence_items)
+    steps = generate_local_cot(query, evidence_serialized)
     return {
         "query": query,
-        "response": "\n".join(responses),
-        "source_documents": retrieved_docs
+        "response": final_response,
+        "source_documents": retrieved_docs,
+        "evidence": evidence_serialized,
+        "steps": [s.model_dump() for s in steps]
     }

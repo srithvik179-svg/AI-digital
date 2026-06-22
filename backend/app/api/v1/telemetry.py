@@ -32,6 +32,7 @@ from app.services.ingestion import (
     clean_and_validate_row,
     bulk_insert_normalized_telemetry
 )
+from app.api.v1.live_stream import update_agent_registry, push_to_sse_queues
 
 router = APIRouter()
 
@@ -202,7 +203,14 @@ async def create_telemetry(record: TelemetryCreate, db: Session = Depends(get_db
             "type": "telemetry_update",
             "data": response_data_json
         }))
-        
+
+        # Phase 46: update agent registry + fan-out to SSE subscribers
+        try:
+            update_agent_registry(record_dict)
+            await push_to_sse_queues(response_data_json)
+        except Exception as sse_err:
+            logger.debug(f"SSE fan-out error (non-critical): {sse_err}")
+
         return response_data
     except Exception as e:
         logger.error(f"Error ingesting telemetry: {str(e)}")

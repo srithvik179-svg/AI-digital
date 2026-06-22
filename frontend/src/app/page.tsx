@@ -16,11 +16,18 @@ import TimeTravelPlayground from '@/components/dashboard/TimeTravelPlayground';
 import ReasoningEngine from '@/components/dashboard/ReasoningEngine';
 import RootCauseAnalysis from '@/components/dashboard/RootCauseAnalysis';
 import AIReasoningDashboard from '@/components/dashboard/AIReasoningDashboard';
+import WhatIfSimulationDashboard from '@/components/dashboard/WhatIfSimulationDashboard';
+import FutureStateDashboard from '@/components/dashboard/FutureStateDashboard';
+import LiveIngestionStatus from '@/components/dashboard/LiveIngestionStatus';
+import FleetDashboard from '@/components/dashboard/FleetDashboard';
+import DigitalTwin3D from '@/components/dashboard/DigitalTwin3D';
+import ExecutiveDashboard from '@/components/dashboard/ExecutiveDashboard';
 import { Terminal, Settings, Play, ShieldAlert, Cpu, CheckCircle2, Upload, AlertCircle, Loader } from 'lucide-react';
 
 const DEVICE_ID = "laptop-mac-001";
 
 export default function Dashboard() {
+  const [dashboardMode, setDashboardMode] = useState<'executive' | 'detailed'>('executive');
   const [telemetryHistory, setTelemetryHistory] = useState<TelemetryData[]>([]);
   const [latestData, setLatestData] = useState<TelemetryData | null>(null);
   const [activeAlerts, setActiveAlerts] = useState<ActiveAlert[]>([]);
@@ -242,6 +249,30 @@ export default function Dashboard() {
         </div>
 
         <div className="flex items-center space-x-4">
+          {/* Dashboard Mode Selector */}
+          <div className="flex bg-slate-900 border border-white/5 p-0.5 rounded-xl text-xs select-none">
+            <button
+              onClick={() => setDashboardMode('executive')}
+              className={`px-3 py-1.5 rounded-lg font-bold transition duration-200 ${
+                dashboardMode === 'executive'
+                  ? 'bg-indigo-600 text-white shadow-md'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              Executive View
+            </button>
+            <button
+              onClick={() => setDashboardMode('detailed')}
+              className={`px-3 py-1.5 rounded-lg font-bold transition duration-200 ${
+                dashboardMode === 'detailed'
+                  ? 'bg-indigo-600 text-white shadow-md'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              Engineering Twin
+            </button>
+          </div>
+
           {/* Status Badge */}
           <div className={`flex items-center space-x-2 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all duration-300 ${
             isConnected 
@@ -358,100 +389,121 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Phase 7: NL Summary banner */}
-        <SummaryCard summary={nlSummary} isConnected={isConnected} />
+        {dashboardMode === 'executive' ? (
+          <ExecutiveDashboard />
+        ) : (
+          <>
+            {/* Phase 46: Live Ingestion Pipeline Status */}
+            <LiveIngestionStatus />
 
-        {/* Dashboard HUD Cards */}
-        <TwinStatus latestData={latestData} isConnected={isConnected} />
+            {/* Phase 47: Multi-Device Fleet Management */}
+            <FleetDashboard />
 
-        {/* ── 5-Panel Telemetry Charts — Full Width ── */}
-        <TelemetryCharts data={telemetryHistory} projections={projections} />
+            {/* Phase 48: 3D Digital Twin Visualization */}
+            <DigitalTwin3D />
 
-        {/* ── AI Reasoning & Predictive Analytics Layer (Phases 23-30) ── */}
-        <AIReasoningDashboard deviceId={DEVICE_ID} tickCount={tickCount} />
+            {/* Phase 7: NL Summary banner */}
+            <SummaryCard summary={nlSummary} isConnected={isConnected} />
 
-        {/* Phase 18 & 19: Historical Replay & Time Travel Scenario Planner */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <ReplayConsole
-            deviceId={DEVICE_ID}
-            onFrameChange={handleReplayFrameChange}
-            onReplayActiveChange={handleReplayActiveChange}
-          />
-          <TimeTravelPlayground
-            deviceId={DEVICE_ID}
-            selectedTimestamp={latestData?.timestamp || null}
-            onProjectionLoaded={setProjections}
-          />
-        </div>
+            {/* Dashboard HUD Cards */}
+            <TwinStatus latestData={latestData} isConnected={isConnected} />
 
-        {/* Phase 13 & 14: Analytics Grid (Correlation Heatmap & Dependency Topology) */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <CorrelationDashboard deviceId={DEVICE_ID} tickCount={tickCount} />
-          <DependencyGraph deviceId={DEVICE_ID} tickCount={tickCount} />
-        </div>
+            {/* ── 5-Panel Telemetry Charts — Full Width ── */}
+            <TelemetryCharts data={telemetryHistory} projections={projections} />
 
-        {/* ── Bottom Row 1: Alerts & Root Cause Diagnostics ── */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Phase 6: Alert Detection Panel */}
-          <AlertsPanel alerts={activeAlerts} deviceId={DEVICE_ID} />
+            {/* ── AI Reasoning & Predictive Analytics Layer (Phases 23-30) ── */}
+            <AIReasoningDashboard deviceId={DEVICE_ID} tickCount={tickCount} />
 
-          {/* Phase 22: Root Cause Analysis Panel */}
-          <RootCauseAnalysis 
-            deviceId={DEVICE_ID} 
-            latestSnapshotId={latestData?.id} 
-            tickCount={tickCount} 
-          />
-        </div>
+            {/* Phase 18 & 19: Historical Replay & Time Travel Scenario Planner */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <ReplayConsole
+                deviceId={DEVICE_ID}
+                onFrameChange={handleReplayFrameChange}
+                onReplayActiveChange={handleReplayActiveChange}
+              />
+              <TimeTravelPlayground
+                deviceId={DEVICE_ID}
+                selectedTimestamp={latestData?.timestamp || null}
+                onProjectionLoaded={setProjections}
+              />
+            </div>
 
-        {/* ── Bottom Row 1.5: Telemetry Search ── */}
-        <div className="grid grid-cols-1 gap-6">
-          {/* Phase 9: Telemetry Search Panel */}
-          <TelemetrySearch deviceId={DEVICE_ID} />
-        </div>
+            {/* Phase 41: What-If Simulation Engine */}
+            <WhatIfSimulationDashboard />
 
-        {/* ── Bottom Row 2: AI Chat & Raw Logs ── */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* AI Twin chat interface */}
-          <div className="lg:col-span-2">
-            <ChatInterface deviceId={DEVICE_ID} />
-          </div>
+            {/* Phases 42–45: Future-State Prediction Engine (XGBoost · LSTM · Prophet) */}
+            <FutureStateDashboard />
 
-          {/* Historical Logs Console */}
-          <div className="glass-panel rounded-2xl border border-white/5 overflow-hidden">
-            <div className="px-5 py-4 border-b border-white/5 bg-slate-900/40 flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <Terminal className="h-4.5 w-4.5 text-indigo-400" />
-                <h3 className="text-xs font-bold text-white uppercase tracking-wider">Raw Telemetry Stream</h3>
+            {/* Phase 13 & 14: Analytics Grid (Correlation Heatmap & Dependency Topology) */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <CorrelationDashboard deviceId={DEVICE_ID} tickCount={tickCount} />
+              <DependencyGraph deviceId={DEVICE_ID} tickCount={tickCount} />
+            </div>
+
+            {/* ── Bottom Row 1: Alerts & Root Cause Diagnostics ── */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Phase 6: Alert Detection Panel */}
+              <AlertsPanel alerts={activeAlerts} deviceId={DEVICE_ID} />
+
+              {/* Phase 22: Root Cause Analysis Panel */}
+              <RootCauseAnalysis 
+                deviceId={DEVICE_ID} 
+                latestSnapshotId={latestData?.id} 
+                tickCount={tickCount} 
+              />
+            </div>
+
+            {/* ── Bottom Row 1.5: Telemetry Search ── */}
+            <div className="grid grid-cols-1 gap-6">
+              {/* Phase 9: Telemetry Search Panel */}
+              <TelemetrySearch deviceId={DEVICE_ID} />
+            </div>
+
+            {/* ── Bottom Row 2: AI Chat & Raw Logs ── */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* AI Twin chat interface */}
+              <div className="lg:col-span-2">
+                <ChatInterface deviceId={DEVICE_ID} />
               </div>
-              <span className="text-[10px] text-slate-500">Showing last 10 frames</span>
-            </div>
-            <div className="p-4 font-mono text-[11px] leading-relaxed max-h-[440px] h-[440px] overflow-y-auto bg-slate-950/40 text-slate-400 space-y-1">
-              {telemetryHistory.length === 0 ? (
-                <div className="text-center py-6 text-slate-600">Awaiting stream packets...</div>
-              ) : (
-                telemetryHistory.slice(0, 10).map((log, idx) => (
-                  <div key={idx} className="flex items-start border-b border-white/[0.02] pb-1 hover:bg-white/[0.01] px-2 rounded">
-                    <span className="text-slate-500 mr-3 shrink-0">[{new Date(log.timestamp).toLocaleTimeString()}]</span>
-                    <span className="text-indigo-400 mr-2 shrink-0">info:</span>
-                    <span className="break-all">
-                      cpu={log.cpu_usage}% | memory={log.memory_usage}% | temp={log.cpu_temperature}°C | fan={log.fan_speed}RPM | battery={log.battery_level}% ({log.power_source}) | processes={log.active_process_count}
-                    </span>
+
+              {/* Historical Logs Console */}
+              <div className="glass-panel rounded-2xl border border-white/5 overflow-hidden">
+                <div className="px-5 py-4 border-b border-white/5 bg-slate-900/40 flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <Terminal className="h-4.5 w-4.5 text-indigo-400" />
+                    <h3 className="text-xs font-bold text-white uppercase tracking-wider">Raw Telemetry Stream</h3>
                   </div>
-                ))
-              )}
+                  <span className="text-[10px] text-slate-500">Showing last 10 frames</span>
+                </div>
+                <div className="p-4 font-mono text-[11px] leading-relaxed max-h-[440px] h-[440px] overflow-y-auto bg-slate-950/40 text-slate-400 space-y-1">
+                  {telemetryHistory.length === 0 ? (
+                    <div className="text-center py-6 text-slate-600">Awaiting stream packets...</div>
+                  ) : (
+                    telemetryHistory.slice(0, 10).map((log, idx) => (
+                      <div key={idx} className="flex items-start border-b border-white/[0.02] pb-1 hover:bg-white/[0.01] px-2 rounded">
+                        <span className="text-slate-500 mr-3 shrink-0">[{new Date(log.timestamp).toLocaleTimeString()}]</span>
+                        <span className="text-indigo-400 mr-2 shrink-0">info:</span>
+                        <span className="break-all">
+                          cpu={log.cpu_usage}% | memory={log.memory_usage}% | temp={log.cpu_temperature}°C | fan={log.fan_speed}RPM | battery={log.battery_level}% ({log.power_source}) | processes={log.active_process_count}
+                        </span>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
 
-        {/* Phase 15: Neo4j Knowledge Graph Explorer */}
-        <KnowledgeGraphExplorer deviceId={DEVICE_ID} />
+            {/* Phase 15: Neo4j Knowledge Graph Explorer */}
+            <KnowledgeGraphExplorer deviceId={DEVICE_ID} />
 
-        {/* Phase 21: Rule-Based Reasoning Engine */}
-        <ReasoningEngine 
-          deviceId={DEVICE_ID} 
-          latestSnapshotId={latestData?.id} 
-          tickCount={tickCount} 
-        />
+            {/* Phase 21: Rule-Based Reasoning Engine */}
+            <ReasoningEngine 
+              deviceId={DEVICE_ID} 
+              latestSnapshotId={latestData?.id} 
+              tickCount={tickCount} 
+            />
+          </>
+        )}
 
       </div>
 

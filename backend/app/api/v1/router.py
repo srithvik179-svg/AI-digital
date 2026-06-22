@@ -12,6 +12,12 @@ from app.api.v1.knowledge_graph import router as knowledge_graph_router
 from app.api.v1.reasoning import router as reasoning_router
 from app.api.v1.rca import router as rca_router
 from app.api.v1.ai_reasoning import router as ai_reasoning_router
+from app.api.v1.copilot import router as copilot_router
+from app.api.v1.what_if import router as what_if_router
+from app.api.v1.future_state import router as future_state_router
+from app.api.v1.live_stream import router as live_stream_router
+from app.api.v1.fleet import router as fleet_router
+from app.api.v1.executive import router as executive_router
 
 router = APIRouter()
 
@@ -28,6 +34,12 @@ router.include_router(knowledge_graph_router, prefix="/knowledge-graph", tags=["
 router.include_router(reasoning_router,       prefix="/reasoning",       tags=["reasoning"])
 router.include_router(rca_router,             prefix="/rca",             tags=["rca"])
 router.include_router(ai_reasoning_router,    prefix="/ai-reasoning",    tags=["ai-reasoning"])
+router.include_router(copilot_router,         prefix="/copilot",         tags=["copilot"])
+router.include_router(what_if_router,         prefix="/what-if-simulation", tags=["what-if-simulation"])
+router.include_router(future_state_router,    prefix="/future-state",       tags=["future-state"])
+router.include_router(live_stream_router,     prefix="/live-stream",        tags=["live-stream"])
+router.include_router(fleet_router,           prefix="/fleet",              tags=["fleet"])
+router.include_router(executive_router,       prefix="/executive",          tags=["executive"])
 
 @router.get("/health", tags=["health"])
 def health_check():

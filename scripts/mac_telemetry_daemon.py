@@ -3,6 +3,8 @@ import subprocess
 import re
 import requests
 import json
+import socket
+import threading
 from datetime import datetime
 
 # We will use psutil for CPU/RAM if installed, or fallback to macOS command utilities
@@ -67,10 +69,41 @@ def get_system_metrics():
         "active_process_count": int(process_count)
     }
 
+def socket_listener():
+    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    try:
+        server.bind(("0.0.0.0", 9090))
+        server.listen(5)
+        print("Daemon command listener active on port 9090...")
+        while True:
+            conn, addr = server.accept()
+            try:
+                data = conn.recv(1024).decode("utf-8").strip()
+                if data:
+                    print(f"[{datetime.now().strftime('%H:%M:%S')}] Received socket trigger command: {data}")
+                    if data == "ECO_MODE":
+                        print(">>> ACTION: Initiating local system Eco Mode (reducing brightness, pausing background indexers)...")
+                    elif data == "KILL_HIGH_CPU":
+                        print(">>> ACTION: Terminating high-CPU consumer processes...")
+                    else:
+                        print(f">>> ACTION: Unrecognized command received: {data}")
+                    conn.sendall(b"ACK")
+            except Exception as e:
+                print(f"Error handling socket client: {e}")
+            finally:
+                conn.close()
+    except Exception as e:
+        print(f"Failed to start socket listener: {e}")
+
 def main():
     print(f"=== Starting Dell AI Digital Twin Host Collector for {DEVICE_ID} ===")
     print(f"Streaming data to {API_URL} every 2 seconds...")
     print("Press Ctrl+C to stop.")
+    
+    # Start command listener thread
+    listener_thread = threading.Thread(target=socket_listener, daemon=True)
+    listener_thread.start()
     
     # Call cpu_percent once to initialize tracking
     psutil.cpu_percent(interval=None)
